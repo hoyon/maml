@@ -11,9 +11,11 @@ data Constant
 data Expr
   = Con Constant
   | While Expr Expr
+  | If Expr Expr Expr
   | Tuple [Expr]
   | Id T.Text
   | Infix T.Text Expr Expr
+  | Application T.Text Expr
   deriving Show
 
 data Dec

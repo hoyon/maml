@@ -46,6 +46,7 @@ expr = makeExprParser term ops <?> "expression"
 term :: Parser Expr
 term = parens expr
    <|> whileExpr
+   <|> ifExpr
    <|> tupleExpr
    <|> idExpr
    <|> Con . Number <$> integer
@@ -58,6 +59,7 @@ ops = [ [ InfixL (Infix <$> symbol "*")
         , InfixL (Infix <$> symbol "-")]
       ]
 
+
 whileExpr :: Parser Expr
 whileExpr = do
   reserved "while"
@@ -65,6 +67,16 @@ whileExpr = do
   reserved "do"
   exp2 <- expr
   return $ While exp1 exp2
+
+ifExpr :: Parser Expr
+ifExpr = do
+  reserved "if"
+  p <- expr
+  reserved "then"
+  exp1 <- expr
+  reserved "else"
+  exp2 <- expr
+  return $ If p exp1 exp2
 
 tupleExpr :: Parser Expr
 tupleExpr = parens $ Tuple <$> sepBy expr (symbol ",")
