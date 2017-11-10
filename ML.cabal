@@ -1,0 +1,34 @@
+name:                ML
+version:             0.1.0.0
+author:              Ho-Yon Mak
+maintainer:          hoyon.mak@gmail.com
+copyright:           2017 Ho-Yon Mak
+build-type:          Simple
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     Lib,
+                       Parser
+  build-depends:       base >= 4.7 && < 5,
+                       megaparsec >= 6.2 && < 7,
+                       text
+  default-language:    Haskell2010
+
+executable ML-exe
+  hs-source-dirs:      app
+  main-is:             Main.hs
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  build-depends:       base
+                     , text
+                     , ML
+  default-language:    Haskell2010
+
+test-suite ML-test
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             Spec.hs
+  build-depends:       base
+                     , ML
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  default-language:    Haskell2010
