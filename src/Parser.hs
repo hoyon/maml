@@ -40,6 +40,18 @@ identifier = (lexeme . try) $ T.pack <$> p
   where
     p = (:) <$> letterChar <*> many alphaNumChar
 
+reservedWords :: [T.Text]
+reservedWords = [ "do"
+                , "while"
+                , "if"
+                , "then"
+                , "else"
+                ]
+
+reservedSymbols :: [T.Text]
+reservedSymbols = ["+", "-", "/", "*", "<", "=", "!", ">"]
+
+-- | Left recursive expression parser
 expr :: Parser Expr
 expr = makeExprParser term ops <?> "expression"
 
@@ -52,13 +64,35 @@ term = parens expr
    <|> Con . Number <$> integer
    <?> "term"
 
+-- | Table of expression operations
 ops :: [[Operator Parser Expr]]
-ops = [ [ InfixL (Infix <$> symbol "*")
-        , InfixL (Infix <$> symbol "/")]
-      , [ InfixL (Infix <$> symbol "+")
-        , InfixL (Infix <$> symbol "-")]
+ops = [
+        [ InfixL (spacef >> pure Appl)]
+
+      , [ binaryOp "*"
+        , binaryOp "/"
+        ]
+
+      , [ binaryOp "+"
+        , binaryOp "-"
+        ]
+
+      , [ binaryOp "=="
+        , binaryOp "!="
+        , binaryOp "<"
+        , binaryOp "<="
+        , binaryOp ">"
+        , binaryOp ">="
+        ]
       ]
 
+-- | Convenience function for binary operations
+binaryOp :: T.Text -> Operator Parser Expr
+binaryOp s = InfixL (Infix <$> symbol s)
+
+-- | space "operator" between expressions for function application
+spacef :: Parser ()
+spacef = sc *> notFollowedBy (choice . map reserved $ reservedSymbols ++ reservedWords)
 
 whileExpr :: Parser Expr
 whileExpr = do

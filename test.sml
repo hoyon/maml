@@ -9,8 +9,10 @@ fun f4 (x, y) = (while 3 do s) * 3;
 
 fun i x = if x then 1 else 2;
 
-(*fun a x = f x*)
+fun a x = f x;
 
-(*fun fib n = if n == 0*)
-(*            then 1*)
-(*            else n * fib (n - 1)*)
+fun fib n = if n == 1
+            then 1
+            else n * fib (n - 1);
+
+fun e () = (f a) a
