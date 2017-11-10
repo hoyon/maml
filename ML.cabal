@@ -9,11 +9,13 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:     Lib,
-                       Parser
+                       Parser,
+                       AST
   build-depends:       base >= 4.7 && < 5,
                        megaparsec >= 6.2 && < 7,
                        text
   default-language:    Haskell2010
+  default-extensions:  OverloadedStrings
 
 executable ML-exe
   hs-source-dirs:      app
@@ -23,6 +25,7 @@ executable ML-exe
                      , text
                      , ML
   default-language:    Haskell2010
+  default-extensions:  OverloadedStrings
 
 test-suite ML-test
   type:                exitcode-stdio-1.0
@@ -32,3 +35,4 @@ test-suite ML-test
                      , ML
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
+  default-extensions:  OverloadedStrings

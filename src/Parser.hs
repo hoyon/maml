@@ -1,6 +1,6 @@
-{-# LANGUAGE OverloadedStrings #-}
-module Parser where
+module Parser (parseString) where
 
+import           AST
 import qualified Data.Text                  as T
 import           Data.Void
 import           Text.Megaparsec
@@ -8,28 +8,9 @@ import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 import           Text.Megaparsec.Expr
 
-data Constant
-  = Number Integer
-  | Str T.Text
-  | Bool Bool
-  deriving Show
-
-data Expr
-  = Con Constant
-  | While Expr Expr
-  | Tuple [Expr]
-  | Id T.Text
-  | Infix T.Text Expr Expr
-  deriving Show
-
-data Dec
-  = Val T.Text Expr
-  | Fun [T.Text] T.Text Expr
-  | Seq [Dec]
-  deriving Show
-
 type Parser = Parsec Void T.Text
 
+-- | Space consumer parser
 sc :: Parser ()
 sc = L.space space1 line block
   where
@@ -126,11 +107,8 @@ funDec = do
 lang :: Parser Dec
 lang = between sc eof dec
 
-showDec :: Dec -> String
-showDec (Seq x) = unlines $ map show x
-showDec s = show s
-
-parseString :: T.Text -> IO ()
-parseString s = case parse lang "file" s of
-  Right x -> putStrLn $ showDec x
-  Left e -> putStrLn $ parseErrorPretty e
+-- | Parse text and either return the AST or an error
+parseString :: T.Text -> Either T.Text Dec
+parseString src = case parse lang "src" src of
+  Right a -> Right a
+  Left e  -> Left $ T.pack $ parseErrorPretty e
