@@ -126,11 +126,8 @@ unitExpr = symbol "()" >> pure (Tuple [])
 idExpr :: Parser Expr
 idExpr = Id <$> identifier
 
-dec :: Parser Dec
-dec = f <$> sepEndBy dec' semi
-  where
-    f [x] = x
-    f x   = Seq x
+dec :: Parser [Dec]
+dec = sepEndBy dec' semi
 
 dec' :: Parser Dec
 dec' = valDec
@@ -152,17 +149,17 @@ funDec = do
   args <- arg
   _ <- symbol "="
   exp1 <- expr
-  return $ Fun args name exp1
+  return $ Fun name args exp1
   where
     arg :: Parser [T.Text]
     arg = (pure <$> identifier)
       <|> parens (sepBy identifier (symbol ","))
 
-lang :: Parser Dec
+lang :: Parser AST
 lang = between sc eof dec
 
 -- | Parse text and either return the AST or an error
-parseString :: T.Text -> Either T.Text Dec
+parseString :: T.Text -> Either T.Text AST
 parseString src = case parse lang "src" src of
   Right a -> Right a
   Left e  -> Left $ T.pack $ parseErrorPretty e

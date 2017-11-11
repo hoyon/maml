@@ -20,11 +20,11 @@ data Expr
 
 data Dec
   = Val T.Text Expr
-  | Fun [T.Text] T.Text Expr
-  | Seq [Dec]
+  | Fun T.Text [T.Text] Expr
   deriving Show
 
+type AST = [Dec]
+
 -- | Split declarations onto their own line each
-showDec :: Dec -> String
-showDec (Seq x) = unlines $ map show x
-showDec s       = show s
+showAST :: AST -> String
+showAST xs = unlines $ map show xs
