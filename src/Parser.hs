@@ -56,10 +56,11 @@ expr :: Parser Expr
 expr = makeExprParser term ops <?> "expression"
 
 term :: Parser Expr
-term = parens expr
+term = try tupleExpr
+   <|> try unitExpr
+   <|> parens expr
    <|> whileExpr
    <|> ifExpr
-   <|> tupleExpr
    <|> idExpr
    <|> Con . Number <$> integer
    <?> "term"
@@ -113,7 +114,14 @@ ifExpr = do
   return $ If p exp1 exp2
 
 tupleExpr :: Parser Expr
-tupleExpr = parens $ Tuple <$> sepBy expr (symbol ",")
+tupleExpr = parens $ do
+  exp1 <- expr
+  _ <- symbol ","
+  rest <- sepBy1 expr (symbol ",")
+  return $ Tuple (exp1 : rest)
+
+unitExpr :: Parser Expr
+unitExpr = symbol "()" >> pure (Tuple [])
 
 idExpr :: Parser Expr
 idExpr = Id <$> identifier

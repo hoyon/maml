@@ -1,5 +1,7 @@
 val a = 4;
 val b = -3;
+val a = (2, 3);
+val unit = ();
 fun w x = while x do 3;
 
 fun f1 x = 1;
@@ -15,4 +17,6 @@ fun fib n = if n == 1
             then 1
             else n * fib (n - 1);
 
-fun e () = (f a) a
+fun e () = (f a) a;
+
+fun s () = add (a, b);
