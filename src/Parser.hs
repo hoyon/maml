@@ -1,4 +1,4 @@
-module Parser (parseString) where
+module Parser (parseString, lang) where
 
 import           AST
 import qualified Data.Text                  as T
