@@ -5,4 +5,4 @@ packages:
 extra-deps:
 - megaparsec-6.2.0
 - hspec-megaparsec-1.0.0
-resolver: lts-9.12
+resolver: lts-9.13
