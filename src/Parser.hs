@@ -35,6 +35,10 @@ parens = between (symbol "(") (symbol ")")
 reserved :: T.Text -> Parser ()
 reserved w = lexeme (string w *> notFollowedBy alphaNumChar)
 
+boolean :: Parser Constant
+boolean = try (reserved "true" >> pure (Bool True))
+  <|> try (reserved "false" >> pure (Bool False))
+
 identifier :: Parser T.Text
 identifier = (lexeme . try) $ T.pack <$> p
   where
@@ -46,6 +50,8 @@ reservedWords = [ "do"
                 , "if"
                 , "then"
                 , "else"
+                , "true"
+                , "false"
                 ]
 
 reservedSymbols :: [T.Text]
@@ -61,8 +67,8 @@ term = try tupleExpr
    <|> parens expr
    <|> whileExpr
    <|> ifExpr
+   <|> try conExpr
    <|> idExpr
-   <|> Con . Number <$> integer
    <?> "term"
 
 -- | Table of expression operations
@@ -94,6 +100,10 @@ binaryOp s = InfixL (Infix <$> symbol s)
 -- | space "operator" between expressions for function application
 spacef :: Parser ()
 spacef = sc *> notFollowedBy (choice . map reserved $ reservedSymbols ++ reservedWords)
+
+conExpr :: Parser Expr
+conExpr = Con . Number <$> integer
+  <|> Con <$> boolean
 
 whileExpr :: Parser Expr
 whileExpr = do

@@ -6,8 +6,14 @@ import           Text.Megaparsec
 main :: IO ()
 main = hspec $ do
   describe "Parsing" $ do
-    it "Value declaration" $
+    it "Integer value declaration" $
       parseAssert "val x = 1;"
+
+    it "Boolean true declaration" $
+      parseAssert "val b = true;"
+
+    it "Boolean false declaration" $
+      parseAssert "val b = false;"
 
     it "Tuple declaration" $
       parseAssert "val t = (1, 2);"
