@@ -1,6 +1,5 @@
 module Main where
 
-import           AST
 import           Check
 import qualified Data.Text    as T
 import qualified Data.Text.IO as T
@@ -11,8 +10,8 @@ main :: IO ()
 main = do
   file <- T.readFile "test.sml"
   let ast = parseString file
-  case ast >>= checkNames of
-    Right x -> putStr $ showAST x
+  case ast >>= typeCheck of
+    Right x -> putStr $ show x
     Left e  -> putErr "Errors: " >> putErr e
 
 putErr :: T.Text -> IO ()
