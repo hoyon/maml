@@ -1,6 +1,6 @@
 module Type where
 
-import qualified Data.Text as T
+import Protolude
 
 data Type
   = TpInt
@@ -9,6 +9,6 @@ data Type
   | TpFun [Type] Type
   | TpInfix Type Type Type
   | TpTuple [Type]
-  | TpUnresolved T.Text Type
+  | TpUnresolved Text Type
   | TpUnknown
   deriving (Show, Eq)

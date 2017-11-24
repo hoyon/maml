@@ -2,15 +2,13 @@ module Parser (parseString, lang) where
 
 import           AST
 import           Error
-import qualified Data.Text                  as T
-import           Data.Void
+import           Protolude hiding (try, Infix)
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 import           Text.Megaparsec.Expr
-import           Control.Monad.Except
 
-type Parser = Parsec Void T.Text
+type Parser = Parsec Void Text
 
 -- | Space consumer parser
 sc :: Parser ()
@@ -22,31 +20,31 @@ sc = L.space space1 line block
 lexeme :: Parser a -> Parser a
 lexeme = L.lexeme sc
 
-symbol :: T.Text -> Parser T.Text
+symbol :: Text -> Parser Text
 symbol = L.symbol sc
 
 integer :: Parser Integer
 integer = L.signed sc (lexeme L.decimal)
 
-semi :: Parser T.Text
+semi :: Parser Text
 semi = symbol ";"
 
 parens :: Parser a -> Parser a
 parens = between (symbol "(") (symbol ")")
 
-reserved :: T.Text -> Parser ()
+reserved :: Text -> Parser ()
 reserved w = lexeme (string w *> notFollowedBy alphaNumChar)
 
 boolean :: Parser Constant
 boolean = try (reserved "true" >> pure (Bool True))
   <|> try (reserved "false" >> pure (Bool False))
 
-identifier :: Parser T.Text
-identifier = (lexeme . try) $ T.pack <$> p
+identifier :: Parser Text
+identifier = (lexeme . try) $ toS <$> p
   where
     p = (:) <$> letterChar <*> many alphaNumChar
 
-reservedWords :: [T.Text]
+reservedWords :: [Text]
 reservedWords = [ "do"
                 , "while"
                 , "if"
@@ -56,7 +54,7 @@ reservedWords = [ "do"
                 , "false"
                 ]
 
-reservedSymbols :: [T.Text]
+reservedSymbols :: [Text]
 reservedSymbols = ["+", "-", "/", "*", "<", "=", "!", ">"]
 
 -- | Left recursive expression parser
@@ -96,7 +94,7 @@ ops = [
       ]
 
 -- | Convenience function for binary operations
-binaryOp :: T.Text -> Operator Parser Expr
+binaryOp :: Text -> Operator Parser Expr
 binaryOp s = InfixL (Infix <$> symbol s)
 
 -- | space "operator" between expressions for function application
@@ -163,7 +161,7 @@ funDec = do
   exp1 <- expr
   return $ Fun name args exp1
   where
-    arg :: Parser [T.Text]
+    arg :: Parser [Text]
     arg = (pure <$> identifier)
       <|> parens (sepBy identifier (symbol ","))
 
@@ -171,7 +169,7 @@ lang :: Parser AST
 lang = between sc eof dec
 
 -- | Parse text and either return the AST or an error
-parseString :: T.Text -> ErrWarn AST
+parseString :: Text -> ErrWarn AST
 parseString src = case parse lang "src" src of
   Right a -> return a
-  Left e  -> throwError $ ParseError $ T.pack $ parseErrorPretty e
+  Left e  -> throwError $ ParseError $ toS $ parseErrorPretty e

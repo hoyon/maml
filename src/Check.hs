@@ -2,33 +2,30 @@
 module Check (typeCheck) where
 
 import           AST
-import           Control.Monad
-import           Control.Monad.Except
-import           Control.Monad.State
 import           Control.Monad.Writer
-import           Data.List
+import           Data.List            (elemIndices)
 import qualified Data.Map             as Map
 import qualified Data.Set             as S
-import qualified Data.Text            as T
 import           Error
+import           Protolude            hiding (Infix)
 import           Type
 
 data Env
-  = EvVal T.Text Type Expr
-  | EvFun T.Text [(T.Text, Type)] Type Expr
-  | EvLocal T.Text Type
+  = EvVal Text Type Expr
+  | EvFun Text [(Text, Type)] Type Expr
+  | EvLocal Text Type
   deriving Show
 
 typeCheck :: AST -> ErrWarn EnvMap
 typeCheck ast = pure ast >>= checkNames >>= createEnv >>= deduceTypes
 
 -- | Get the name of a declaration
-name :: Dec -> T.Text
+name :: Dec -> Text
 name (Val x _)   = x
 name (Fun x _ _) = x
 
 -- | Get all names defined in AST
-names :: AST -> [T.Text]
+names :: AST -> [Text]
 names = fmap name
 
 -- | The number of times each element appears in the list
@@ -37,16 +34,16 @@ numOccurances xs = let set = S.fromList xs
                    in S.toList $ S.map (\x -> (length $ elemIndices x xs, x)) set
 
 -- | Duplicate entries in list and the number of times they occur
-duplicates :: [T.Text] -> [(Int, T.Text)]
+duplicates :: [Text] -> [(Int, Text)]
 duplicates xs = filter (\(x, _) -> x > 1) occurances
   where
     occurances = numOccurances xs
 
 -- | Check for any names defined multiple times
 checkNames :: AST -> ErrWarn AST
-checkNames ast = if null dupes
-                 then return ast
-                 else throwError . makeErr . head $ dupes
+checkNames ast = case dupes of
+                   (x:_) -> throwError . makeErr $ x
+                   _     -> return ast
   where
     dupes = duplicates $ names ast
     makeErr (n, x) = MultipleDefinition x n
@@ -62,7 +59,7 @@ makeEnv (Fun x args expr) = EvFun x [(n, TpUnknown) | n <- args] TpUnknown expr
 -- -------------------------------------------------------
 -- Type deduction and checking
 
-type EnvMap = Map.Map T.Text Env
+type EnvMap = Map.Map Text Env
 
 newtype Check a = Check { unCheck :: StateT EnvMap ErrWarn a }
   deriving (Functor, Applicative, Monad, MonadState EnvMap, MonadWriter [Warning], MonadError Error)
@@ -80,12 +77,12 @@ deduceTypes env = do
 makeMap :: [Env] -> EnvMap
 makeMap es = Map.fromList $ map env2Pair es
 
-env2Pair :: Env -> (T.Text, Env)
+env2Pair :: Env -> (Text, Env)
 env2Pair env@(EvVal a _ _)   = (a, env)
 env2Pair env@(EvFun a _ _ _) = (a, env)
 
 -- | Built in infix operators
-builtinInfix :: Map.Map T.Text Type
+builtinInfix :: Map.Map Text Type
 builtinInfix = Map.fromList
   [ ("+", TpInfix TpInt TpInt TpInt)
   , ("-", TpInfix TpInt TpInt TpInt)
@@ -124,14 +121,14 @@ typeDec (EvFun fname args _ expr) = do
     isLocal x = case x of
       EvLocal{} -> True
       _         -> False
-    compareArgs :: T.Text -> EnvMap -> Check (T.Text, Type)
+    compareArgs :: Text -> EnvMap -> Check (Text, Type)
     compareArgs iden locals =
       case Map.lookup iden locals of
         Just (EvLocal _ tn) -> if tn == TpUnknown
                                then warn (UnusedVariable iden) >> return (iden, tn)
                                else return (iden, tn)
 
-typeDec _ = error "Cannot type local env"
+typeDec _ = panic "Cannot type local env"
 
 -- | Get the type of an expression
 typeExpr :: Expr -> Check Type
@@ -187,10 +184,10 @@ typeExpr (Infix op e1 e2) =
           et <- typeExpr e
           unless (t == et) (throwError $ Mismatch t et)
 
-typeExpr e = throwError $ OtherError $ T.concat ["Failed to type ", T.pack $ show e]
+typeExpr e = throwError . OtherError $ "Failed to type " `mappend` show e
 
 -- | Check identifier has the right type
-checkIden :: T.Text -> Type -> Check Bool
+checkIden :: Text -> Type -> Check Bool
 checkIden iden tf = do
   env <- get
   case Map.lookup iden env of

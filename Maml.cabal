@@ -8,8 +8,7 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Lib,
-                       Parser,
+  exposed-modules:     Parser,
                        AST,
                        Check,
                        Error,
@@ -19,9 +18,11 @@ library
                        megaparsec >= 6.2 && < 7,
                        mtl,
                        transformers,
+                       protolude >= 0.2,
                        text
   default-language:    Haskell2010
   default-extensions:  OverloadedStrings
+                     , NoImplicitPrelude
 
 executable Maml-exe
   hs-source-dirs:      app
@@ -30,8 +31,10 @@ executable Maml-exe
   build-depends:       base
                      , text
                      , Maml
+                     , protolude >= 0.2
   default-language:    Haskell2010
   default-extensions:  OverloadedStrings
+                     , NoImplicitPrelude
 
 test-suite Maml-test
   type:                exitcode-stdio-1.0
