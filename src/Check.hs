@@ -10,8 +10,8 @@ import           Data.List
 import qualified Data.Map             as Map
 import qualified Data.Set             as S
 import qualified Data.Text            as T
-
-type Error = T.Text
+import           Error
+import           Type
 
 data Env
   = EvVal T.Text Type Expr
@@ -19,18 +19,7 @@ data Env
   | EvLocal T.Text Type
   deriving Show
 
-data Type
-  = TpInt
-  | TpBool
-  | TpString
-  | TpFun [Type] Type
-  | TpInfix Type Type Type
-  | TpTuple [Type]
-  | TpUnresolved T.Text Type
-  | TpUnknown
-  deriving (Show, Eq)
-
-typeCheck :: AST -> Either Error EnvMap
+typeCheck :: AST -> ErrWarn EnvMap
 typeCheck ast = pure ast >>= checkNames >>= createEnv >>= deduceTypes
 
 -- | Get the name of a declaration
@@ -54,17 +43,17 @@ duplicates xs = filter (\(x, _) -> x > 1) occurances
     occurances = numOccurances xs
 
 -- | Check for any names defined multiple times
-checkNames :: AST -> Either Error AST
+checkNames :: AST -> ErrWarn AST
 checkNames ast = if null dupes
-                 then Right ast
-                 else Left $ T.unlines $ map makeWarn dupes
+                 then return ast
+                 else throwError . makeErr . head $ dupes
   where
     dupes = duplicates $ names ast
-    makeWarn (n, x) = T.concat ["name ", x, " defined ", T.pack . show $ n, " times"]
+    makeErr (n, x) = MultipleDefinition x n
 
 -- | Create a list of all bindings
-createEnv :: AST -> Either Error [Env]
-createEnv ast = Right $ map makeEnv ast
+createEnv :: AST -> ErrWarn [Env]
+createEnv ast = return $ map makeEnv ast
 
 makeEnv :: Dec -> Env
 makeEnv (Val x expr) = EvVal x TpUnknown expr
@@ -75,8 +64,18 @@ makeEnv (Fun x args expr) = EvFun x [(n, TpUnknown) | n <- args] TpUnknown expr
 
 type EnvMap = Map.Map T.Text Env
 
-newtype TC a = TC { unTC :: WriterT T.Text (StateT EnvMap (Either Error)) a }
-  deriving (Functor, Applicative, Monad, MonadState EnvMap, MonadError Error, MonadWriter T.Text)
+newtype Check a = Check { unCheck :: StateT EnvMap ErrWarn a }
+  deriving (Functor, Applicative, Monad, MonadState EnvMap, MonadWriter [Warning], MonadError Error)
+
+-- | Execute Type Check monad
+execCheck :: EnvMap -> Env -> ErrWarn EnvMap
+execCheck env dec = execStateT (unCheck (typeDec dec)) env
+
+-- | Take an untyped env and deduce all types
+deduceTypes :: [Env] -> ErrWarn EnvMap
+deduceTypes env = do
+  let em = makeMap env
+  foldM execCheck em env
 
 makeMap :: [Env] -> EnvMap
 makeMap es = Map.fromList $ map env2Pair es
@@ -96,7 +95,7 @@ builtinInfix = Map.fromList
   ]
 
 -- | Get the type of a declaration
-typeDec :: Env -> TC Type
+typeDec :: Env -> Check Type
 typeDec (EvVal iden _ expr) = do
   env <- get
   tp <- typeExpr expr
@@ -125,17 +124,17 @@ typeDec (EvFun fname args _ expr) = do
     isLocal x = case x of
       EvLocal{} -> True
       _         -> False
-    compareArgs :: T.Text -> EnvMap -> TC (T.Text, Type)
+    compareArgs :: T.Text -> EnvMap -> Check (T.Text, Type)
     compareArgs iden locals =
       case Map.lookup iden locals of
         Just (EvLocal _ tn) -> if tn == TpUnknown
-                               then tell "Unused variable" >> return (iden, tn)
+                               then warn (UnusedVariable iden) >> return (iden, tn)
                                else return (iden, tn)
 
 typeDec _ = error "Cannot type local env"
 
 -- | Get the type of an expression
-typeExpr :: Expr -> TC Type
+typeExpr :: Expr -> Check Type
 typeExpr (Con c) = case c of
   (Number _) -> return TpInt
   (Str _)    -> return TpString
@@ -146,15 +145,15 @@ typeExpr (If p e1 e2) = do
   e1_t <- typeExpr e1
   e2_t <- typeExpr e2
 
-  unless (p_t == TpBool) (throwError "Type of predicate must be bool")
-  unless (e1_t == e2_t) (throwError "Type of both clauses of `if` statement must be the same")
+  unless (p_t == TpBool) (throwError $ Mismatch TpBool p_t)
+  unless (e1_t == e2_t) (throwError $ Mismatch e1_t e2_t)
 
   return e1_t
 
 typeExpr (While p e) = do
   p_t <- typeExpr p >>= checkPredicate
   e_t <- typeExpr e
-  unless (p_t == TpBool) (throwError "Type of predicate must be bool")
+  unless (p_t == TpBool) (throwError $ Mismatch TpBool p_t)
   return e_t
 
 typeExpr (Tuple es) = TpTuple <$> mapM typeExpr es
@@ -164,10 +163,10 @@ typeExpr (Id iden) = do
   case Map.lookup iden env of
     Just (EvVal _ t _) -> return $ unknown t
     Just (EvLocal _ t) -> return $ unknown t
-    _ -> throwError $ T.concat ["Name not defined: ", iden]
+    _                  -> throwError $ NotDefined iden
   where
     unknown TpUnknown = TpUnresolved iden TpUnknown
-    unknown x = x
+    unknown x         = x
 
 typeExpr (Infix op e1 e2) =
   case findOperator op of
@@ -176,22 +175,22 @@ typeExpr (Infix op e1 e2) =
       checkOperand e2 tp2
 
       return tr
-    _ -> throwError $ T.concat ["Operator not defined: " , op]
+    _ -> throwError $ NotDefined op
   where
     findOperator o = Map.lookup o builtinInfix
     checkOperand e t =
       case e of
         Id iden -> do
           b <- checkIden iden t
-          unless b (throwError $ T.concat ["Type mismatch: ", iden, " not of type ", T.pack $ show t])
+          unless b (throwError $ Mismatch TpBool t)
         _ -> do
           et <- typeExpr e
-          unless (t == et) (throwError "Operand type mismatch")
+          unless (t == et) (throwError $ Mismatch t et)
 
-typeExpr e = throwError $ T.concat ["Failed to type ", T.pack $ show e]
+typeExpr e = throwError $ OtherError $ T.concat ["Failed to type ", T.pack $ show e]
 
 -- | Check identifier has the right type
-checkIden :: T.Text -> Type -> TC Bool
+checkIden :: T.Text -> Type -> Check Bool
 checkIden iden tf = do
   env <- get
   case Map.lookup iden env of
@@ -203,24 +202,14 @@ checkIden iden tf = do
                                 put $ Map.insert iden (EvLocal iden tf) env
                                 return True
                        | otherwise      -> return False
-    _ -> throwError $ T.concat ["Name not defined: ", iden]
+    _ -> throwError $ NotDefined iden
 
-checkPredicate :: Type -> TC Type
+checkPredicate :: Type -> Check Type
 checkPredicate t =
   case t of
     TpUnresolved iden _ -> do
       b <- checkIden iden TpBool
       if b
         then return TpBool
-        else throwError "Type of predicate must be bool"
+        else throwError $ Mismatch TpBool t
     x -> return x
-
--- | Execute Type Check monad
-execTC :: EnvMap -> Env -> Either Error EnvMap
-execTC env dec = (flip execStateT env . runWriterT) (unTC (typeDec dec))
-
--- | Take an untyped env and deduce all types
-deduceTypes :: [Env] -> Either Error EnvMap
-deduceTypes env = do
-  let em = makeMap env
-  foldM execTC em env

@@ -1,12 +1,14 @@
 module Parser (parseString, lang) where
 
 import           AST
+import           Error
 import qualified Data.Text                  as T
 import           Data.Void
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 import           Text.Megaparsec.Expr
+import           Control.Monad.Except
 
 type Parser = Parsec Void T.Text
 
@@ -169,7 +171,7 @@ lang :: Parser AST
 lang = between sc eof dec
 
 -- | Parse text and either return the AST or an error
-parseString :: T.Text -> Either T.Text AST
+parseString :: T.Text -> ErrWarn AST
 parseString src = case parse lang "src" src of
-  Right a -> Right a
-  Left e  -> Left $ T.pack $ parseErrorPretty e
+  Right a -> return a
+  Left e  -> throwError $ ParseError $ T.pack $ parseErrorPretty e
