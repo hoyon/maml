@@ -12,14 +12,16 @@ library
                        AST,
                        Check,
                        Error,
-                       Type
+                       Type,
+                       Env
   build-depends:       base >= 4.7 && < 5,
                        containers,
+                       formatting,
                        megaparsec >= 6.2 && < 7,
                        mtl,
-                       transformers,
                        protolude >= 0.2,
-                       text
+                       text,
+                       transformers
   default-language:    Haskell2010
   default-extensions:  OverloadedStrings
                      , NoImplicitPrelude

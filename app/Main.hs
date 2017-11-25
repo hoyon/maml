@@ -11,7 +11,7 @@ main = do
   let ast = parseString file
   result <- runErrWarn $ ast >>= typeCheck
   case result of
-    Right x -> putStr (show x :: Text)
+    Right x -> putText $ show x
     Left e  -> putErr "Errors: " >> putErr (show e)
 
 putErr :: Text -> IO ()
