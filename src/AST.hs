@@ -3,7 +3,7 @@ module AST where
 import Protolude
 
 data Constant
-  = Number Integer
+  = Number Int
   | Str Text
   | Bool Bool
   deriving Show

@@ -23,7 +23,7 @@ lexeme = L.lexeme sc
 symbol :: Text -> Parser Text
 symbol = L.symbol sc
 
-integer :: Parser Integer
+integer :: Parser Int
 integer = L.signed sc (lexeme L.decimal)
 
 semi :: Parser Text
