@@ -1,12 +1,15 @@
 module CodeGen.Util ( section
                     , uleb128
                     , sleb128
+                    , encodeString
                     , putBytes
                     ) where
 
-import Protolude
-import Data.Binary.Put
+import           Data.Binary.Put
+import qualified Data.ByteString      as BS
 import qualified Data.ByteString.Lazy as BL
+import           Data.Text.Encoding
+import           Protolude
 
 -- Framework for section
 section :: Word8 -> Put -> Put
@@ -39,6 +42,12 @@ sleb128 n
     value = n `shiftR` 7
     sb = byte .&. 0x40 == 0x40
     end = (value == 0 && not sb) || (value == -1 && sb)
+
+-- | Encode a string in wasm format
+encodeString :: Text -> [Word8]
+encodeString t = uleb128 (length bytes) ++ bytes
+  where
+    bytes = BS.unpack $ encodeUtf8 t
 
 -- | Put a series of Bytes
 putBytes :: [Word8] -> Put

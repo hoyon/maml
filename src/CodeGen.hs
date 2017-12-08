@@ -1,6 +1,7 @@
 module CodeGen where
 
 import           AST
+import           CodeGen.Function
 import           CodeGen.Global
 import           CodeGen.Util
 import           Data.Binary.Put
@@ -26,5 +27,9 @@ codegen' :: Env -> Put
 codegen' env = do
   putBytes magic
   putBytes version
-  genGlobal env
+  -- genGlobal env
+  let (ts, fs) = getEntries env
+  genTypes ts
+  genSigs fs
+  genCode fs
 

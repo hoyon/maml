@@ -1,4 +1,8 @@
 module CodeGen.Instruction ( i32Const
+                           , i32Add
+                           , i32Sub
+                           , i32Mul
+                           , i32DivU
                            )where
 
 import           CodeGen.Util
@@ -18,3 +22,9 @@ i32Literal n
   where
     min32 = fromIntegral (minBound :: Int32)
     max32 = fromIntegral (maxBound :: Int32)
+
+i32Add, i32Sub, i32Mul, i32DivU :: Word8
+i32Add = 0x6A
+i32Sub = 0x6B
+i32Mul = 0x6C
+i32DivU = 0x6E

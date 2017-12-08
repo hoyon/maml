@@ -1,5 +1,7 @@
 module CodeGen.Global ( genGlobal
-                      )where
+                      , GlobalEntry(..)
+                      , getGlobals
+                      ) where
 
 import           AST
 import           CodeGen.Instruction
@@ -12,7 +14,7 @@ import           Type
 
 -- | Section code for globals
 globalSectionCode :: Word8
-globalSectionCode = 0x06
+globalSectionCode = 6
 
 genGlobal :: Env -> Put
 genGlobal env = section globalSectionCode $
