@@ -63,9 +63,7 @@ typeDec name (BdFun args _ expr) = do
   newEnv <- get
 
   -- Merge types of arguements with locals
-  newArgs <- case head newEnv >>= matchArgs args of
-    Just x  -> return x
-    Nothing -> throwError $ OtherError "Failed to type arguements"
+  newArgs <- matchArgs args newEnv
 
   -- New env with function type now deduced
   put $ putEnv name (BdFun newArgs tp expr) env
@@ -73,10 +71,12 @@ typeDec name (BdFun args _ expr) = do
   return tp
 
   where
-    matchArgs :: [(Text, Type)] -> Env -> Maybe [(Text, Type)]
-    matchArgs a env = mapM (\(n, _) -> case lookup n env of
-                                         Just (BdVal t _) -> Just (n, t)
-                                         _                -> Nothing) a
+    matchArgs :: [(Text, Type)] -> EnvStack -> Check [(Text, Type)]
+    matchArgs a (env:_) = mapM (\p@(n, _) -> case lookup n env of
+                                               Just (BdVal TpUnknown _) -> warn (UnusedVariable n) >> return p
+                                               Just (BdVal t _) -> return (n, t)
+                                               _                -> panic "Can't find arg in env") a
+    matchArgs _ _ = panic "Empty environment"
 
 -- | Get the type of an expression
 typeExpr :: Expr -> Check Type

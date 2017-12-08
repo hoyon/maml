@@ -15,8 +15,11 @@ runErrWarn ew = do
   case res of
     Left e -> return $ Left e
     Right (a, w) -> do
-      mapM_ print w
+      mapM_ putWarn w
       return $ Right a
+
+putWarn :: Warning -> IO ()
+putWarn = hPutStrLn stderr . (show :: Warning -> Text)
 
 data Warning
   = UnusedVariable Text
