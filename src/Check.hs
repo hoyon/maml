@@ -49,6 +49,8 @@ typeDec name (BdVal _ expr) = do
   put $ putEnv name (BdVal tp expr) env
   return tp
 
+typeDec _ (BdConst tp _) = return tp
+
 typeDec name (BdFun args _ expr) = do
   env <- get
   -- Create scope with arguements

@@ -7,7 +7,6 @@ module Env ( createEnv
            ) where
 
 import           AST
-import qualified Data.Map  as Map
 import qualified Data.Set  as S
 import           Error
 import           Protolude
@@ -58,7 +57,9 @@ createEnv :: AST -> ErrWarn Env
 createEnv ast = map makeEnv <$> checkNames ast
 
 makeEnv :: Dec -> (Text, Binding)
-makeEnv (Val x (Con c))   = (x, BdConst TpUnknown c)
+makeEnv (Val x (Con c))   = case c of
+                              Number _ -> (x, BdConst TpInt c)
+                              Bool _   -> (x, BdConst TpBool c)
 makeEnv (Val x expr)      = (x, BdVal TpUnknown expr)
 makeEnv (Fun x args expr) = (x, BdFun [(n, TpUnknown) | n <- args] TpUnknown expr)
 

@@ -7,7 +7,6 @@ import           AST
 import           CodeGen.Instruction
 import           CodeGen.Util
 import           Data.Binary.Put
-import qualified Data.Map        as Map
 import           Env
 import           Protolude
 import           Type
@@ -25,31 +24,27 @@ genGlobal env = section globalSectionCode $
     globals = getGlobals env
     count = length globals
 
-data GlobalEntry = GlobalEntry Text Type Expr Int
+data GlobalEntry = GlobalEntry Text Type Constant Int
   deriving Show
 
 -- | Get the entries which will be generated as globals
 getGlobals :: Env -> [GlobalEntry]
 getGlobals env = zipWith toGlobal (filter isGlobal env) [0..]
   where
-    isGlobal (_, BdVal _ e) = case e of
-                                Con (Number _) -> True
-                                Con (Bool _)   -> True
-                                _              -> False
+    isGlobal (_, BdConst _ _) = True
     isGlobal _ = False
 
-    toGlobal (name, BdVal tp expr) n = GlobalEntry name tp expr n
+    toGlobal (name, BdConst tp c) n = GlobalEntry name tp c n
     toGlobal _ _ = notImplemented
 
-
 globalEntry :: GlobalEntry -> Put
-globalEntry (GlobalEntry _ TpInt (Con (Number n)) _) = do
+globalEntry (GlobalEntry _ TpInt (Number n) _) = do
   putWord8 0x7f -- i32
   putWord8 0x00 -- immutable
   i32Const n
   putWord8 0x0b -- end
 
-globalEntry (GlobalEntry _ TpBool (Con (Bool b)) _) = do
+globalEntry (GlobalEntry _ TpBool (Bool b) _) = do
   putWord8 0x7f -- i32
   putWord8 0x00 -- immutable
   i32Const $ if b then 1 else 0
