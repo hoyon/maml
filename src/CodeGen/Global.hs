@@ -30,7 +30,7 @@ data GlobalEntry = GlobalEntry Text Type Expr Int
 
 -- | Get the entries which will be generated as globals
 getGlobals :: Env -> [GlobalEntry]
-getGlobals env = zipWith toGlobal (filter isGlobal $ Map.toList env) [0..]
+getGlobals env = zipWith toGlobal (filter isGlobal env) [0..]
   where
     isGlobal (_, BdVal _ e) = case e of
                                 Con (Number _) -> True

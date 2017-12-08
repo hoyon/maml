@@ -5,7 +5,6 @@ import Protolude
 data Type
   = TpInt
   | TpBool
-  | TpString
   | TpFun [Type] Type
   | TpInfix Type Type Type
   | TpTuple [Type]

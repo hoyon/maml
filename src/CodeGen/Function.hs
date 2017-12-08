@@ -33,7 +33,7 @@ data FunctionEntry = FunctionEntry { _name      :: Text
 makeLenses ''FunctionEntry
 
 getEntries :: Env -> ([TypeEntry], [FunctionEntry])
-getEntries env = foldl f ([], []) (filter isFunction (Map.toList env))
+getEntries env = foldl f ([], []) (filter isFunction env)
   where
     isFunction (_, BdFun{}) = True
     isFunction _            = False

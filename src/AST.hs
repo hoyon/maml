@@ -4,7 +4,6 @@ import Protolude
 
 data Constant
   = Number Int
-  | Str Text
   | Bool Bool
   deriving Show
 

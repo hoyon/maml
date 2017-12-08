@@ -3,6 +3,7 @@ module Check (typeCheck) where
 
 import           AST
 import           Control.Monad.Writer
+import           Data.List            (lookup)
 import qualified Data.Map             as Map
 import           Env
 import           Error
@@ -24,7 +25,7 @@ typeCheck ast = pure ast >>= createEnv >>= deduceTypes
 -- | Take an untyped env and deduce all types
 deduceTypes :: Env -> ErrWarn Env
 deduceTypes env = do
-  res <- foldM (\e (n, b) -> execCheck b n e) [env] (Map.toList env)
+  res <- foldM (\e (n, b) -> execCheck b n e) [env] env
   case head res of
     Just x  -> return x
     Nothing -> throwError $ OtherError "Failed to type program"
@@ -52,7 +53,7 @@ typeDec name (BdFun args _ expr) = do
   env <- get
   -- Create scope with arguements
   -- localEnv <- pure $ Map.union (Map.fromList $ map (\(x, t) -> (x, EvLocal x t)) args) env
-  let localEnv = Map.fromList $ map (\(x, t) -> (x, BdVal t (Con $ Number 23))) args
+  let localEnv = map (\(x, t) -> (x, BdVal t (Con $ Number 23))) args
 
   -- Get types with this scope as the environment
   put (localEnv : env)
@@ -71,7 +72,7 @@ typeDec name (BdFun args _ expr) = do
 
   where
     matchArgs :: [(Text, Type)] -> Env -> Maybe [(Text, Type)]
-    matchArgs a env = mapM (\(n, _) -> case Map.lookup n env of
+    matchArgs a env = mapM (\(n, _) -> case lookup n env of
                                          Just (BdVal t _) -> Just (n, t)
                                          _                -> Nothing) a
 
@@ -79,7 +80,6 @@ typeDec name (BdFun args _ expr) = do
 typeExpr :: Expr -> Check Type
 typeExpr (Con c) = case c of
   (Number _) -> return TpInt
-  (Str _)    -> return TpString
   (Bool _)   -> return TpBool
 
 typeExpr (If p e1 e2) = do
@@ -105,8 +105,8 @@ typeExpr (Id iden) = do
   case findEnv iden env of
     -- XXX Beware of recursive definitions!
     Just (BdVal TpUnknown expr) -> typeExpr expr
-    Just (BdVal t _) -> return t
-    _                -> throwError $ NotDefined iden
+    Just (BdVal t _)            -> return t
+    _                           -> throwError $ NotDefined iden
 
 typeExpr (Infix op e1 e2) =
   case findOperator op of

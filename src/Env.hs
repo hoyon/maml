@@ -12,14 +12,16 @@ import qualified Data.Set  as S
 import           Error
 import           Protolude
 import           Type
-import           Data.List (elemIndices)
+import           Data.List (elemIndices, lookup)
 
 data Binding
   = BdVal Type Expr
   | BdFun [(Text, Type)] Type Expr
+  | BdConst Type Constant
   deriving Show
 
-type Env = Map.Map Text Binding
+type BindingPair = (Text, Binding)
+type Env = [BindingPair]
 type EnvStack = [Env]
 
 -- | Get the name of a declaration
@@ -53,10 +55,11 @@ checkNames ast = case dupes of
 
 -- | Create a list of all bindings
 createEnv :: AST -> ErrWarn Env
-createEnv ast = Map.fromList . map makeEnv <$> checkNames ast
+createEnv ast = map makeEnv <$> checkNames ast
 
 makeEnv :: Dec -> (Text, Binding)
-makeEnv (Val x expr) = (x, BdVal TpUnknown expr)
+makeEnv (Val x (Con c))   = (x, BdConst TpUnknown c)
+makeEnv (Val x expr)      = (x, BdVal TpUnknown expr)
 makeEnv (Fun x args expr) = (x, BdFun [(n, TpUnknown) | n <- args] TpUnknown expr)
 
 -- EnvStack operations
@@ -64,19 +67,31 @@ makeEnv (Fun x args expr) = (x, BdFun [(n, TpUnknown) | n <- args] TpUnknown exp
 -- | Find the topmost binding for a name
 findEnv :: Text -> EnvStack -> Maybe Binding
 findEnv _ [] = Nothing
-findEnv n (x:xs) = case Map.lookup n x of
+findEnv n (x:xs) = case lookup n x of
                       Just b -> Just b
                       Nothing -> findEnv n xs
 
 -- | Put binding in first appearance of name, else add to top of stack
 putEnv :: Text -> Binding -> EnvStack -> EnvStack
 putEnv n binding s@(h:t) = case findEnv n s of
-                       Nothing -> Map.insert n binding h : t
+                       Nothing -> ((n, binding) : h) : t
                        Just _ -> snd $ mapAccumL f False s
   where
     f inserted env = if inserted
                      then (True, env)
-                     else case Map.lookup n env of
-                            Just _ -> (True, Map.insert n binding env)
+                     else case lookup n env of
+                            Just _ -> (True, addToAL env n binding)
                             Nothing -> (False, env)
 putEnv _ _ _ = panic "putEnv: Empty env"
+
+-- Association list funcs from https://github.com/jgoerzen/missingh/blob/master/src/Data/List/Utils.hs
+
+{- | Adds the specified (key, value) pair to the given list, removing any
+existing pair with the same key already present. -}
+addToAL :: Eq key => [(key, elt)] -> key -> elt -> [(key, elt)]
+addToAL l key value = (key, value) : delFromAL l key
+
+{- | Removes all (key, value) pairs from the given list where the key
+matches the given one. -}
+delFromAL :: Eq key => [(key, a)] -> key -> [(key, a)]
+delFromAL l key = filter (\a -> (fst a) /= key) l
