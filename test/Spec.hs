@@ -26,9 +26,6 @@ parsing = do
     it "Add function" $
       parseAssert "fun add (x, y) = x + y;"
 
-    it "Fibonacci function" $
-      parseAssert "fun fib n = if n == 1 then 1 else n * fib (n - 1);"
-
     it "Multiple args" $
       parseAssert "fun f (a, b, g) = g a b;"
 
@@ -96,6 +93,12 @@ checking = do
 
     it "Wrong Arguments" $
       checkProgramFail "fun f (a, b) = a + b; fun g x = f x;"
+
+    it "Factorial function" $
+      checkProgram "fun fact n = if n == 1 then 1 else n * fact (n - 1);"
+
+    it "Fibonacci function" $
+      checkProgram' "fun fib n = if n == 0 then 1 else if n == 1 then 1 else (fib (n - 1)) + (fib (n - 2));"
 
   where
     checkProgram str = do
