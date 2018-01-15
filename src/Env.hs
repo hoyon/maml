@@ -14,9 +14,9 @@ import           Type
 import           Data.List (elemIndices, lookup)
 
 data Binding
-  = BdVal Type Expr
-  | BdFun [(Text, Type)] Type Expr
-  | BdConst Type Constant
+  = BdVal Expr
+  | BdFun [Text] Expr
+  | BdConst Constant
   deriving Show
 
 type BindingPair = (Text, Binding)
@@ -58,10 +58,9 @@ createEnv ast = map makeEnv <$> checkNames ast
 
 makeEnv :: Dec -> (Text, Binding)
 makeEnv (Val x (Con c))   = case c of
-                              Number _ -> (x, BdConst TpInt c)
-                              Bool _   -> (x, BdConst TpBool c)
-makeEnv (Val x expr)      = (x, BdVal TpUnknown expr)
-makeEnv (Fun x args expr) = (x, BdFun [(n, TpUnknown) | n <- args] TpUnknown expr)
+                              Number _ -> (x, BdConst c)
+makeEnv (Val x expr)      = (x, BdVal expr)
+makeEnv (Fun x args expr) = (x, BdFun args expr)
 
 -- EnvStack operations
 

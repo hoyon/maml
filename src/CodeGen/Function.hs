@@ -38,8 +38,8 @@ getEntries env = foldl f ([], []) (filter isFunction env)
     isFunction (_, BdFun{}) = True
     isFunction _            = False
 
-    makeTypeEntry (BdFun args ret _) = TypeEntry (map snd args) ret
-    makeFuncEntry name (BdFun args _ expr) idx = FunctionEntry name (map fst args) expr idx
+    makeTypeEntry (BdFun args _) = TypeEntry (map (const TpInt) args) TpInt
+    makeFuncEntry name (BdFun args expr) idx = FunctionEntry name args expr idx
 
     f :: ([TypeEntry], [FunctionEntry]) -> (Text, Binding) -> ([TypeEntry], [FunctionEntry])
     f entries@(ts, fs) (name, binding) = let te = makeTypeEntry binding

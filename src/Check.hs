@@ -37,55 +37,72 @@ builtinInfix = Map.fromList
   , ("-", TpInfix TpInt TpInt TpInt)
   , ("*", TpInfix TpInt TpInt TpInt)
   , ("/", TpInfix TpInt TpInt TpInt)
+  , ("%", TpInfix TpInt TpInt TpInt)
+
   , ("==", TpInfix TpInt TpInt TpBool)
+  , ("!=", TpInfix TpInt TpInt TpBool)
+  , (">=", TpInfix TpInt TpInt TpBool)
+  , ("<=", TpInfix TpInt TpInt TpBool)
+  , ("<", TpInfix TpInt TpInt TpBool)
+  , (">", TpInfix TpInt TpInt TpBool)
+
+  , ("||", TpInfix TpBool TpBool TpBool)
+  , ("&&", TpInfix TpBool TpBool TpBool)
   ]
 
 -- | Get the type of a declaration
 typeDec :: Text -> Binding -> Check Type
-typeDec name (BdVal _ expr) = do
-  env <- get
+typeDec _ (BdVal expr) = do
   tp <- typeExpr expr
-  -- put $ Map.insert iden (EvVal iden tp expr) env
-  put $ putEnv name (BdVal tp expr) env
-  return tp
+  case tp of
+    TpInt -> return TpInt
+    _     -> throwError $ OtherError "Bindings must be integers"
 
-typeDec _ (BdConst tp _) = return tp
+typeDec _ (BdConst con) = do
+  case con of
+    Number _ -> return TpInt
+    _        -> throwError $ OtherError "Bindings must be integers"
 
-typeDec name (BdFun args _ expr) = do
+typeDec name (BdFun args expr) = do
+
   env <- get
-  -- Create scope with arguements
+  -- Create scope with arguments
   -- localEnv <- pure $ Map.union (Map.fromList $ map (\(x, t) -> (x, EvLocal x t)) args) env
-  let localEnv = map (\(x, t) -> (x, BdVal t (Con $ Number 23))) args
+  let localEnv = map (\x -> (x, BdVal (Con $ Number 0))) args
 
-  -- Get types with this scope as the environment
+  -- -- Get types with this scope as the environment
   put (localEnv : env)
   tp <- typeExpr expr
-  newEnv <- get
+  -- newEnv <- get
+  put env
+  case tp of
+    TpInt -> return TpInt
+    _     -> throwError $ OtherError "Function must return an integer"
 
-  -- Merge types of arguements with locals
-  newArgs <- matchArgs args newEnv
+  -- -- Merge types of arguments with locals
+  -- newArgs <- matchArgs args newEnv
 
-  -- New env with function type now deduced
-  put $ putEnv name (BdFun newArgs tp expr) env
+  -- -- New env with function type now deduced
+  -- put $ putEnv name (BdFun newArgs tp expr) env
 
-  return tp
+  -- return tp
 
-  where
-    matchArgs :: [(Text, Type)] -> EnvStack -> Check [(Text, Type)]
-    matchArgs a (env:_) = mapM (\p@(n, _) -> case lookup n env of
-                                               Just (BdVal TpUnknown _) -> warn (UnusedVariable n) >> return p
-                                               Just (BdVal t _) -> return (n, t)
-                                               _                -> panic "Can't find arg in env") a
-    matchArgs _ _ = panic "Empty environment"
+  -- where
+  --   matchArgs :: [(Text, Type)] -> EnvStack -> Check [(Text, Type)]
+  --   matchArgs a (env:_) = mapM (\p@(n, _) -> case lookup n env of
+  --                                              Just (BdVal TpUnknown _) -> warn (UnusedVariable n) >> return p
+  --                                              Just (BdVal t _) -> return (n, t)
+  --                                              _                -> panic "Can't find arg in env") a
+  --   matchArgs _ _ = panic "Empty environment"
 
 -- | Get the type of an expression
 typeExpr :: Expr -> Check Type
 typeExpr (Con c) = case c of
   (Number _) -> return TpInt
-  (Bool _)   -> return TpBool
+  -- (Bool _)   -> return TpBool
 
 typeExpr (If p e1 e2) = do
-  p_t <- typeExpr p >>= checkPredicate
+  p_t <- typeExpr p
   e1_t <- typeExpr e1
   e2_t <- typeExpr e2
 
@@ -95,7 +112,7 @@ typeExpr (If p e1 e2) = do
   return e1_t
 
 typeExpr (While p e) = do
-  p_t <- typeExpr p >>= checkPredicate
+  p_t <- typeExpr p
   e_t <- typeExpr e
   unless (p_t == TpBool) (throwError $ Mismatch TpBool p_t)
   return e_t
@@ -106,9 +123,9 @@ typeExpr (Id iden) = do
   env <- get
   case findEnv iden env of
     -- XXX Beware of recursive definitions!
-    Just (BdVal TpUnknown expr) -> typeExpr expr
-    Just (BdVal t _)            -> return t
-    _                           -> throwError $ NotDefined iden
+    Just (BdVal _)   -> return TpInt
+    Just (BdConst _) -> return TpInt
+    _                -> throwError $ NotDefined iden
 
 typeExpr (Infix op e1 e2) =
   case findOperator op of
@@ -120,34 +137,15 @@ typeExpr (Infix op e1 e2) =
     _ -> throwError $ NotDefined op
   where
     findOperator o = Map.lookup o builtinInfix
-    checkOperand e t =
-      case e of
-        Id iden -> do
-          b <- checkIden iden t
-          unless b (throwError $ Mismatch TpBool t)
-        _ -> do
-          et <- typeExpr e
-          unless (t == et) (throwError $ Mismatch t et)
+    checkOperand e t = do
+      et <- typeExpr e
+      unless (t == et) (throwError $ Mismatch t et)
 
-typeExpr e = throwError . OtherError $ sformat ("Failed to type " % text) (show e)
-
--- | Check identifier has the right type
-checkIden :: Text -> Type -> Check Bool
-checkIden iden tf = do
+typeExpr (Call fname args) = do
   env <- get
-  case findEnv iden env of
-    Just (BdVal t expr) | t == tf -> return True
-                        | t == TpUnknown -> do
-                            put $ putEnv iden (BdVal tf expr) env
-                            return True
-                        | otherwise -> return False
 
-    _ -> throwError $ NotDefined iden
-
-checkPredicate :: Type -> Check Type
-checkPredicate t@(TpUnresolved iden _) = do
-      b <- checkIden iden TpBool
-      if b
-        then return TpBool
-        else throwError $ Mismatch TpBool t
-checkPredicate x = return x
+  case findEnv fname env of
+    Just (BdFun params _) -> if length args == length params
+                             then return TpInt
+                             else throwError $ BadCallError (length args) (length params)
+    _ -> throwError $ NotDefined fname

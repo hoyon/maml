@@ -30,6 +30,7 @@ data Error
   | MultipleDefinition Text Int
   | NotDefined Text
   | ParseError Text
+  | BadCallError Int Int
   | OtherError Text
   deriving Show
 

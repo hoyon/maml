@@ -14,7 +14,7 @@ data Expr
   | Tuple [Expr]
   | Id Text
   | Infix Text Expr Expr
-  | Appl Expr Expr
+  | Call Text [Expr]
   deriving Show
 
 data Dec

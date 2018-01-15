@@ -7,6 +7,7 @@ import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 import           Text.Megaparsec.Expr
+import           Prelude (fail)
 
 type Parser = Parsec Void Text
 
@@ -24,7 +25,10 @@ symbol :: Text -> Parser Text
 symbol = L.symbol sc
 
 integer :: Parser Int
-integer = L.signed sc (lexeme L.decimal)
+integer = lexeme L.decimal
+
+signed :: Parser Int
+signed = L.signed sc (L.decimal)
 
 semi :: Parser Text
 semi = symbol ";"
@@ -40,9 +44,14 @@ boolean = try (reserved "true" >> pure (Bool True))
   <|> try (reserved "false" >> pure (Bool False))
 
 identifier :: Parser Text
-identifier = (lexeme . try) $ toS <$> p
+identifier = (lexeme . try) $ toS <$> (p >>= check)
   where
     p = (:) <$> letterChar <*> many alphaNumChar
+    check :: [Char] -> Parser Text
+    check x =
+      if (toS x) `elem` reservedWords
+      then fail $ "Cannot use reserved keyword " ++ x ++ " as identifier"
+      else return $ toS x
 
 reservedWords :: [Text]
 reservedWords = [ "do"
@@ -55,7 +64,7 @@ reservedWords = [ "do"
                 ]
 
 reservedSymbols :: [Text]
-reservedSymbols = ["+", "-", "/", "*", "<", "=", "!", ">"]
+reservedSymbols = ["+", "-", "/", "*", "<", "=", "!", ">", "|", "&", "%"]
 
 -- | Left recursive expression parser
 expr :: Parser Expr
@@ -68,16 +77,16 @@ term = try tupleExpr
    <|> whileExpr
    <|> ifExpr
    <|> try conExpr
+   <|> try callExpr
    <|> idExpr
    <?> "term"
 
 -- | Table of expression operations
 ops :: [[Operator Parser Expr]]
 ops = [
-        [ InfixL (spacef >> pure Appl)]
-
-      , [ binaryOp "*"
+        [ binaryOp "*"
         , binaryOp "/"
+        , binaryOp "%"
         ]
 
       , [ binaryOp "+"
@@ -90,6 +99,8 @@ ops = [
         , binaryOp "<="
         , binaryOp ">"
         , binaryOp ">="
+        , binaryOp "||"
+        , binaryOp "&&"
         ]
       ]
 
@@ -135,6 +146,12 @@ unitExpr = symbol "()" >> pure (Tuple [])
 
 idExpr :: Parser Expr
 idExpr = Id <$> identifier
+
+callExpr :: Parser Expr
+callExpr = do
+  fname <- identifier
+  args <- some expr
+  return $ Call fname args
 
 dec :: Parser [Dec]
 dec = sepEndBy dec' semi
