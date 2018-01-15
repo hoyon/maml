@@ -17,14 +17,8 @@ parsing = do
     it "Integer value declaration" $
       parseAssert "val x = 1;"
 
-    it "Boolean true declaration" $
-      parseAssert "val b = true;"
-
-    it "Boolean false declaration" $
-      parseAssert "val b = false;"
-
-    it "Tuple declaration" $
-      parseAssert "val t = (1, 2);"
+    it "Negative number" $
+      parseAssert "val x = ~1;"
 
     it "Double function" $
       parseAssert "fun double x = x * 2;"
@@ -36,7 +30,7 @@ parsing = do
       parseAssert "fun fib n = if n == 1 then 1 else n * fib (n - 1);"
 
     it "Multiple args" $
-      parseAssert "fun f (a, b, g) = g (a, b);"
+      parseAssert "fun f (a, b, g) = g a b;"
 
     it "Undefined operand" $
       parseRefute "val x = 3 $ 4"
@@ -100,7 +94,7 @@ checking = do
     it "Function call" $
       checkProgram "fun f a = a + 3; fun g x = f (f x);"
 
-    it "Bad function call" $
+    it "Wrong Arguments" $
       checkProgramFail "fun f (a, b) = a + b; fun g x = f x;"
 
   where

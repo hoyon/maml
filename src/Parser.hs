@@ -25,10 +25,9 @@ symbol :: Text -> Parser Text
 symbol = L.symbol sc
 
 integer :: Parser Int
-integer = lexeme L.decimal
-
-signed :: Parser Int
-signed = L.signed sc (L.decimal)
+integer = lexeme $
+      L.decimal
+  <|> ((\x -> 0 - x) <$> ((char '~') >> L.decimal))
 
 semi :: Parser Text
 semi = symbol ";"
@@ -71,9 +70,9 @@ expr :: Parser Expr
 expr = makeExprParser term ops <?> "expression"
 
 term :: Parser Expr
-term = try tupleExpr
-   <|> try unitExpr
-   <|> parens expr
+term = -- try tupleExpr <|>
+       -- try unitExpr <|>
+       parens expr
    <|> whileExpr
    <|> ifExpr
    <|> try conExpr
@@ -114,7 +113,7 @@ spacef = sc *> notFollowedBy (choice . map reserved $ reservedSymbols ++ reserve
 
 conExpr :: Parser Expr
 conExpr = Con . Number <$> integer
-  <|> Con <$> boolean
+  -- <|> Con <$> boolean
 
 whileExpr :: Parser Expr
 whileExpr = do
