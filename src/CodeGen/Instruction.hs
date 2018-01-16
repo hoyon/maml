@@ -23,8 +23,25 @@ i32Literal n
     min32 = fromIntegral (minBound :: Int32)
     max32 = fromIntegral (maxBound :: Int32)
 
-i32Add, i32Sub, i32Mul, i32DivU :: Word8
-i32Add = 0x6A
-i32Sub = 0x6B
-i32Mul = 0x6C
+-- 32 bit integer arithemetic operations
+i32Add, i32Sub, i32Mul, i32DivU, i32RemS :: Word8
+i32Add  = 0x6A
+i32Sub  = 0x6B
+i32Mul  = 0x6C
 i32DivU = 0x6E
+i32RemS = 0xdF
+
+-- 32 bit integer comparison operators
+i32Eq, i32Ne, i32Lt, i32Gt, i32Le, i32Ge :: Word8
+i32Eq = 0x46
+i32Ne = 0x47
+i32Lt = 0x48
+i32Gt = 0x4A
+i32Le = 0x4C
+i32Ge = 0x4E
+
+-- 32 bit bitwise operators
+i32And, i32Or, i32Xor :: Word8
+i32And = 0x71
+i32Or  = 0x72
+i32Xor = 0x73

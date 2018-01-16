@@ -11,7 +11,7 @@ import qualified Data.ByteString.Lazy as BL
 import           Data.Text.Encoding
 import           Protolude
 
--- Framework for section
+-- | Framework for section
 section :: Word8 -> Put -> Put
 section code content =
   when (count > 0) $ do -- Only emit section if it isn't empty
