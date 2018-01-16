@@ -44,7 +44,7 @@ spec = do
     it "Using a declared value in expression" $
       checkProgram "val x = 3; fun f y = x + y;"
 
-    it "Using an undeclared valud in expression" $
+    it "Using an undeclared value in expression" $
       checkProgramFail "fun f y = x + y;"
 
     it "Order doesn't matter" $
