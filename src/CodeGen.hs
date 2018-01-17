@@ -10,7 +10,6 @@ import qualified Data.Map             as Map
 import           Env
 import           Error
 import           Protolude
-import           Type
 
 -- | Magic bytes to start output
 magic :: [Word8]

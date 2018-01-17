@@ -12,6 +12,14 @@ import           Env
 import           Protolude
 import           Type
 
+data GlobalEntry = GlobalEntry
+  { geIndex :: Int
+  , geValue :: Constant
+  }
+  deriving Show
+
+type GlobalMap = [(Text, GlobalEntry)]
+
 -- | Section code for globals
 globalSectionCode :: Word8
 globalSectionCode = 6
@@ -23,7 +31,7 @@ getGlobals env = zipWith toGlobal (filter isGlobal env) [0..]
     isGlobal (_, BdConst _) = True
     isGlobal _ = False
 
-    toGlobal (name, BdConst c) n = (name, GlobalEntry { index = n, value = c})
+    toGlobal (name, BdConst c) n = (name, GlobalEntry { geIndex = n, geValue = c})
     toGlobal _ _ = notImplemented
 
 genGlobal :: GlobalMap -> Put
@@ -33,14 +41,6 @@ genGlobal globals = section globalSectionCode $
     mapM_ globalEntry $ map snd globals
   where
     count = length globals
-
-data GlobalEntry = GlobalEntry
-  { index :: Int
-  , value :: Constant
-  }
-  deriving Show
-
-type GlobalMap = [(Text, GlobalEntry)]
 
 globalEntry :: GlobalEntry -> Put
 globalEntry (GlobalEntry _ (Number n)) = do

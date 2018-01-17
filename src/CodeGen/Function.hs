@@ -26,28 +26,43 @@ codeSectionCode = 10
 data TypeEntry = TypeEntry [Type] Type
   deriving (Show, Eq)
 
-data FunctionEntry = FunctionEntry { _name      :: Text
-                                   , _params    :: [Text]
-                                   , _expr      :: Expr
-                                   , _typeIndex :: Int
+data FunctionEntry = FunctionEntry { feIndex     :: Int
+                                   , feParams    :: [Text]
+                                   , feExpr      :: Expr
+                                   , feTypeIndex :: Int
                                    }
-makeLenses ''FunctionEntry
+  deriving (Show)
 
-getFunctions :: Env -> ([TypeEntry], [FunctionEntry])
+type FunctionMap = [(Text, FunctionEntry)]
+
+type Locals = [Text]
+type Compile = ReaderT (FunctionMap, GlobalMap, Locals) PutM ()
+runCompile :: (FunctionMap, GlobalMap, Locals) -> Compile -> BL.ByteString
+runCompile globals c = runPut $ flip runReaderT globals c
+
+
+getFunctions :: Env -> ([TypeEntry], FunctionMap)
 getFunctions env = foldl f ([], []) (filter isFunction env)
   where
     isFunction (_, BdFun{}) = True
     isFunction _            = False
 
     makeTypeEntry (BdFun args _) = TypeEntry (map (const TpInt) args) TpInt
-    makeFuncEntry name (BdFun args expr) idx = FunctionEntry name args expr idx
+    makeFuncEntry name (BdFun args expr) idx typeIdx = (name, FunctionEntry idx args expr typeIdx)
 
-    f :: ([TypeEntry], [FunctionEntry]) -> (Text, Binding) -> ([TypeEntry], [FunctionEntry])
-    f entries@(ts, fs) (name, binding) = let te = makeTypeEntry binding
-                                             idx = elemIndex te ts
-                                         in case idx of
-                                             Just n -> over _2 (++ [makeFuncEntry name binding n]) entries
-                                             Nothing -> (ts ++ [te], fs ++ [makeFuncEntry name binding (length ts)])
+    f :: ([TypeEntry], FunctionMap) -> (Text, Binding) -> ([TypeEntry], FunctionMap)
+    f (ts, fs) (name, binding) = let te = makeTypeEntry binding
+                                     tIdx = elemIndex te ts
+                                 in case tIdx of
+                                      Just n -> (ts, fs ++ [makeFuncEntry name binding (length fs) n])
+                                      Nothing -> (ts ++ [te],
+                                                   fs ++ [makeFuncEntry name binding (length fs) (length ts)])
+
+
+genTypes :: [TypeEntry] -> Put
+genTypes ts = section typeSectionCode $ do
+  putUleb128 $ length ts
+  mapM_ typeEntry ts
 
 typeEntry :: TypeEntry -> Put
 typeEntry (TypeEntry args ret) = do
@@ -62,36 +77,27 @@ typeEntry (TypeEntry args ret) = do
     type2byte TpBool = 0x7f
     type2byte t      = panic $ "Can't gen this type yet: " <> show t
 
-genTypes :: [TypeEntry] -> Put
-genTypes ts = section typeSectionCode $ do
-  putUleb128 $ length ts
-  mapM_ typeEntry ts
-
-genSigs :: [FunctionEntry] -> Put
+genSigs :: FunctionMap -> Put
 genSigs fs = section functionSectionCode $ do
   putUleb128 $ length fs
-  putBytes $ concatMap (\fn -> uleb128 $ fn^.typeIndex) fs
+  putBytes $ concatMap (\fn -> uleb128 $ feTypeIndex $ snd fn) fs
 
-genCode :: [FunctionEntry] -> GlobalMap -> Put
-genCode fs globals = section codeSectionCode $ do
-  putUleb128 $ length fs
-  mapM_ (flip functionEntry globals) fs
+genCode :: FunctionMap -> GlobalMap -> Put
+genCode functions globals = section codeSectionCode $ do
+  putUleb128 $ length functions
+  mapM_ (functionEntry functions globals) functions
 
-type Compile = ReaderT (FunctionEntry, GlobalMap) PutM ()
-
-runCompile :: (FunctionEntry, GlobalMap) -> Compile -> BL.ByteString
-runCompile globals c = runPut $ flip runReaderT globals c
-
-functionEntry :: FunctionEntry -> GlobalMap -> Put
-functionEntry fe globals = do
+functionEntry :: FunctionMap -> GlobalMap -> (Text, FunctionEntry) -> Put
+functionEntry functions globals (_, fe)= do
   putUleb128 $ fromIntegral $ BL.length body
   putLazyByteString body
   where
-    body = runCompile (fe, globals) $ do
+    body = runCompile (functions, globals, feParams fe) $ do
       lift $ putUleb128 0 -- no locals
-      compile (fe^.expr)
+      compile $ feExpr fe
       lift $ putWord8 0x0b
 
+-- | Main expression compiling function
 compile :: Expr -> Compile
 compile (Infix op a b) = do
   compile a
@@ -101,10 +107,9 @@ compile (Infix op a b) = do
 compile (Con (Number n)) = lift $ i32Const n
 
 compile (Id iden) = do
-  (fe, globals) <- ask
-  let p = (fe^.params)
+  (functions, globals, locals) <- ask
   -- Check local scope, then global scope
-  case iden `elemIndex` p of
+  case iden `elemIndex` locals of
     Just idx -> do -- Use Local
       lift $ putWord8 0x20 -- get_local
       lift $ putUleb128 idx -- local index
@@ -112,7 +117,7 @@ compile (Id iden) = do
       case lookup iden globals of
         Just ge -> do
           lift $ putWord8 0x23 -- get_global
-          lift $ putUleb128 $ CodeGen.Global.index ge -- global index
+          lift $ putUleb128 $ geIndex ge -- global index
         Nothing -> panic $ "Can't find binding for " <> iden
 
 compileOp :: Text -> Word8
