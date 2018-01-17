@@ -3,10 +3,9 @@
 (*val c = (2, 3); *)
 (* val unit = (); *)
 (* fun w x = while true do 3; *)
-
-val a = 100;
-fun f1 () = 1 + 1; 
-(* fun f2 (x, y) = (3 + x); *)
+val y = 3;
+fun f1 x = x + y; 
+fun f2 (x, y) = 3 + y; 
 (* fun f3 (x, y) = 3 + x; *)
 (* fun f4 (x, y) = (while true do 3) * 3; *)
 

@@ -8,7 +8,7 @@ import           CodeGen.Global
 import           Control.Lens
 import           Data.Binary.Put
 import qualified Data.ByteString.Lazy as BL
-import           Data.List            (elemIndex)
+import           Data.List            (elemIndex, lookup)
 import qualified Data.Map             as Map
 import           Env
 import           Protolude            hiding (Infix)
@@ -77,9 +77,9 @@ genCode fs globals = section codeSectionCode $ do
   putBytes $ uleb128 $ length fs
   mapM_ (flip functionEntry globals) fs
 
-type Compile = ReaderT GlobalMap PutM ()
+type Compile = ReaderT (FunctionEntry, GlobalMap) PutM ()
 
-runCompile :: GlobalMap -> Compile -> BL.ByteString
+runCompile :: (FunctionEntry, GlobalMap) -> Compile -> BL.ByteString
 runCompile globals c = runPut $ flip runReaderT globals c
 
 functionEntry :: FunctionEntry -> GlobalMap -> Put
@@ -87,8 +87,8 @@ functionEntry fe globals = do
   putBytes $ uleb128 $ fromIntegral $ BL.length body
   putLazyByteString body
   where
-    body = runCompile globals $ do
-      lift $ putBytes $ uleb128 $ length (fe^.params)
+    body = runCompile (fe, globals) $ do
+      lift $ putBytes $ uleb128 0 -- no locals
       compile (fe^.expr)
       lift $ putWord8 0x0b
 
@@ -99,6 +99,21 @@ compile (Infix op a b) = do
   lift $ putWord8 $ compileOp op
 
 compile (Con (Number n)) = lift $ i32Const n
+
+compile (Id iden) = do
+  (fe, globals) <- ask
+  let p = (fe^.params)
+  -- Check local scope, then global scope
+  case iden `elemIndex` p of
+    Just idx -> do -- Use Local
+      lift $ putWord8 0x20 -- get_local
+      lift $ putBytes $ uleb128 idx -- local index
+    Nothing -> -- Use global
+      case lookup iden globals of
+        Just ge -> do
+          lift $ putWord8 0x23 -- get_global
+          lift $ putBytes $ uleb128 $ CodeGen.Global.index ge -- global index
+        Nothing -> panic $ "Can't find binding for " <> iden
 
 compileOp :: Text -> Word8
 compileOp op
