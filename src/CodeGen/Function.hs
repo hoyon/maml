@@ -52,7 +52,7 @@ getFunctions env = foldl f ([], []) (filter isFunction env)
 typeEntry :: TypeEntry -> Put
 typeEntry (TypeEntry args ret) = do
   putWord8 0x60 -- Func type code
-  putBytes $ uleb128 $ length args
+  putUleb128 $ length args
   putBytes $ map type2byte args
   putWord8 0x01 -- One return type
   putWord8 $ type2byte ret
@@ -64,17 +64,17 @@ typeEntry (TypeEntry args ret) = do
 
 genTypes :: [TypeEntry] -> Put
 genTypes ts = section typeSectionCode $ do
-  putBytes $ uleb128 $ length ts
+  putUleb128 $ length ts
   mapM_ typeEntry ts
 
 genSigs :: [FunctionEntry] -> Put
 genSigs fs = section functionSectionCode $ do
-  putBytes $ uleb128 $ length fs
+  putUleb128 $ length fs
   putBytes $ concatMap (\fn -> uleb128 $ fn^.typeIndex) fs
 
 genCode :: [FunctionEntry] -> GlobalMap -> Put
 genCode fs globals = section codeSectionCode $ do
-  putBytes $ uleb128 $ length fs
+  putUleb128 $ length fs
   mapM_ (flip functionEntry globals) fs
 
 type Compile = ReaderT (FunctionEntry, GlobalMap) PutM ()
@@ -84,11 +84,11 @@ runCompile globals c = runPut $ flip runReaderT globals c
 
 functionEntry :: FunctionEntry -> GlobalMap -> Put
 functionEntry fe globals = do
-  putBytes $ uleb128 $ fromIntegral $ BL.length body
+  putUleb128 $ fromIntegral $ BL.length body
   putLazyByteString body
   where
     body = runCompile (fe, globals) $ do
-      lift $ putBytes $ uleb128 0 -- no locals
+      lift $ putUleb128 0 -- no locals
       compile (fe^.expr)
       lift $ putWord8 0x0b
 
@@ -107,12 +107,12 @@ compile (Id iden) = do
   case iden `elemIndex` p of
     Just idx -> do -- Use Local
       lift $ putWord8 0x20 -- get_local
-      lift $ putBytes $ uleb128 idx -- local index
+      lift $ putUleb128 idx -- local index
     Nothing -> -- Use global
       case lookup iden globals of
         Just ge -> do
           lift $ putWord8 0x23 -- get_global
-          lift $ putBytes $ uleb128 $ CodeGen.Global.index ge -- global index
+          lift $ putUleb128 $ CodeGen.Global.index ge -- global index
         Nothing -> panic $ "Can't find binding for " <> iden
 
 compileOp :: Text -> Word8

@@ -29,7 +29,7 @@ getGlobals env = zipWith toGlobal (filter isGlobal env) [0..]
 genGlobal :: GlobalMap -> Put
 genGlobal globals = section globalSectionCode $
   when (count > 0) $ do
-    putBytes $ uleb128 count
+    putUleb128 count
     mapM_ globalEntry $ map snd globals
   where
     count = length globals

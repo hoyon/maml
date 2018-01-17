@@ -3,6 +3,8 @@ module CodeGen.Util ( section
                     , sleb128
                     , encodeString
                     , putBytes
+                    , putUleb128
+                    , putSleb128
                     ) where
 
 import           Data.Binary.Put
@@ -16,7 +18,7 @@ section :: Word8 -> Put -> Put
 section code content =
   when (count > 0) $ do -- Only emit section if it isn't empty
     putWord8 code
-    putBytes $ uleb128 $ fromIntegral $ BL.length contents
+    putUleb128 $ fromIntegral $ BL.length contents
     putLazyByteString contents
   where
     contents = runPut content
@@ -52,3 +54,11 @@ encodeString t = uleb128 (length bytes) ++ bytes
 -- | Put a series of Bytes
 putBytes :: [Word8] -> Put
 putBytes = mapM_ putWord8
+
+-- | Put a number in uleb128 format
+putUleb128 :: Int -> Put
+putUleb128 = putBytes . uleb128
+
+-- | Put a number in sleb128 format
+putSleb128 :: Int -> Put
+putSleb128 = putBytes . sleb128
