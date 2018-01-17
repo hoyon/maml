@@ -1,6 +1,7 @@
 module CodeGen.Global ( genGlobal
                       , GlobalEntry(..)
                       , getGlobals
+                      , GlobalMap
                       ) where
 
 import           AST
@@ -15,30 +16,34 @@ import           Type
 globalSectionCode :: Word8
 globalSectionCode = 6
 
-genGlobal :: Env -> Put
-genGlobal env = section globalSectionCode $
-  when (count > 0) $ do
-    putBytes $ uleb128 count
-    mapM_ globalEntry globals
-  where
-    globals = getGlobals env
-    count = length globals
-
-data GlobalEntry = GlobalEntry Text Constant Int
-  deriving Show
-
 -- | Get the entries which will be generated as globals
-getGlobals :: Env -> [GlobalEntry]
+getGlobals :: Env -> GlobalMap
 getGlobals env = zipWith toGlobal (filter isGlobal env) [0..]
   where
     isGlobal (_, BdConst _) = True
     isGlobal _ = False
 
-    toGlobal (name, BdConst c) n = GlobalEntry name c n
+    toGlobal (name, BdConst c) n = (name, GlobalEntry { index = n, value = c})
     toGlobal _ _ = notImplemented
 
+genGlobal :: GlobalMap -> Put
+genGlobal globals = section globalSectionCode $
+  when (count > 0) $ do
+    putBytes $ uleb128 count
+    mapM_ globalEntry $ map snd globals
+  where
+    count = length globals
+
+data GlobalEntry = GlobalEntry
+  { index :: Int
+  , value :: Constant
+  }
+  deriving Show
+
+type GlobalMap = [(Text, GlobalEntry)]
+
 globalEntry :: GlobalEntry -> Put
-globalEntry (GlobalEntry _ (Number n) _) = do
+globalEntry (GlobalEntry _ (Number n)) = do
   putWord8 0x7f -- i32
   putWord8 0x00 -- immutable
   i32Const n

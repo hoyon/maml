@@ -4,6 +4,7 @@ module CodeGen.Function where
 import           AST
 import           CodeGen.Instruction
 import           CodeGen.Util
+import           CodeGen.Global
 import           Control.Lens
 import           Data.Binary.Put
 import qualified Data.ByteString.Lazy as BL
@@ -32,8 +33,8 @@ data FunctionEntry = FunctionEntry { _name      :: Text
                                    }
 makeLenses ''FunctionEntry
 
-getEntries :: Env -> ([TypeEntry], [FunctionEntry])
-getEntries env = foldl f ([], []) (filter isFunction env)
+getFunctions :: Env -> ([TypeEntry], [FunctionEntry])
+getFunctions env = foldl f ([], []) (filter isFunction env)
   where
     isFunction (_, BdFun{}) = True
     isFunction _            = False
@@ -71,28 +72,33 @@ genSigs fs = section functionSectionCode $ do
   putBytes $ uleb128 $ length fs
   putBytes $ concatMap (\fn -> uleb128 $ fn^.typeIndex) fs
 
-genCode :: [FunctionEntry] -> Put
-genCode fs = section codeSectionCode $ do
+genCode :: [FunctionEntry] -> GlobalMap -> Put
+genCode fs globals = section codeSectionCode $ do
   putBytes $ uleb128 $ length fs
-  mapM_ functionEntry fs
+  mapM_ (flip functionEntry globals) fs
 
-functionEntry :: FunctionEntry -> Put
-functionEntry fe = do
+type Compile = ReaderT GlobalMap PutM ()
+
+runCompile :: GlobalMap -> Compile -> BL.ByteString
+runCompile globals c = runPut $ flip runReaderT globals c
+
+functionEntry :: FunctionEntry -> GlobalMap -> Put
+functionEntry fe globals = do
   putBytes $ uleb128 $ fromIntegral $ BL.length body
   putLazyByteString body
   where
-    body = runPut $ do
-      putBytes $ uleb128 0 -- no locals
+    body = runCompile globals $ do
+      lift $ putBytes $ uleb128 $ length (fe^.params)
       compile (fe^.expr)
-      putWord8 0x0b
+      lift $ putWord8 0x0b
 
-compile :: Expr -> Put
+compile :: Expr -> Compile
 compile (Infix op a b) = do
   compile a
   compile b
-  putWord8 $ compileOp op
+  lift $ putWord8 $ compileOp op
 
-compile (Con (Number n)) = i32Const n
+compile (Con (Number n)) = lift $ i32Const n
 
 compileOp :: Text -> Word8
 compileOp op

@@ -27,9 +27,13 @@ codegen' :: Env -> Put
 codegen' env = do
   putBytes magic
   putBytes version
-  -- genGlobal env
-  let (ts, fs) = getEntries env
+
+  let globals = getGlobals env
+  let (ts, fs) = getFunctions env
+
   genTypes ts
   genSigs fs
-  genCode fs
+  genGlobal globals
+  -- genExport globals fs
+  genCode fs globals
 

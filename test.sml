@@ -4,6 +4,7 @@
 (* val unit = (); *)
 (* fun w x = while true do 3; *)
 
+val a = 100;
 fun f1 () = 1 + 1; 
 (* fun f2 (x, y) = (3 + x); *)
 (* fun f3 (x, y) = 3 + x; *)
