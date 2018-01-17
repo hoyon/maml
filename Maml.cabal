@@ -26,7 +26,6 @@ library
                        bytestring,
                        containers,
                        formatting,
-                       lens,
                        megaparsec >= 6.2 && < 7,
                        mtl,
                        protolude >= 0.2,

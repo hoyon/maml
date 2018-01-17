@@ -1,11 +1,9 @@
-{-# LANGUAGE TemplateHaskell #-}
 module CodeGen.Function where
 
 import           AST
 import           CodeGen.Instruction
 import           CodeGen.Util
 import           CodeGen.Global
-import           Control.Lens
 import           Data.Binary.Put
 import qualified Data.ByteString.Lazy as BL
 import           Data.List            (elemIndex, lookup)
