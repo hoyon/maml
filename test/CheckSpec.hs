@@ -60,7 +60,10 @@ spec = do
       checkProgram "fun f (a, b, c, d) = if ((a == b) || (a == c)) && (c == d) then 1 else 0;"
 
     it "Function call" $
-      checkProgram "fun f a = a + 3; fun g x = f (f x);"
+      checkProgram "fun f a = a + 3; fun g x = f x;"
+
+    it "Nested function calls" $
+      checkProgram "fun inc x = x + 1; fun inc2 x = inc (inc x);"
 
     it "Wrong Arguments" $
       checkProgramFail "fun f (a, b) = a + b; fun g x = f x;"

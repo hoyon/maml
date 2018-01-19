@@ -149,8 +149,15 @@ idExpr = Id <$> identifier
 callExpr :: Parser Expr
 callExpr = do
   fname <- identifier
-  args <- some expr
+  args <- try multi <|> single
   return $ Call fname args
+  where
+    multi = do
+      Tuple args <- tupleExpr
+      return args
+    single = do
+      args <- expr
+      return [args]
 
 dec :: Parser [Dec]
 dec = sepEndBy dec' semi

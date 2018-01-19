@@ -34,8 +34,12 @@ data FunctionEntry = FunctionEntry { feIndex     :: Int
 type FunctionMap = [(Text, FunctionEntry)]
 
 type Locals = [Text]
-type Compile = ReaderT (FunctionMap, GlobalMap, Locals) PutM ()
-runCompile :: (FunctionMap, GlobalMap, Locals) -> Compile -> BL.ByteString
+data CompileConfig = CompileConfig { ccFunctions :: FunctionMap
+                                   , ccGlobals   :: GlobalMap
+                                   , ccLocals    :: Locals
+                                   }
+type Compile = ReaderT CompileConfig PutM ()
+runCompile :: CompileConfig -> Compile -> BL.ByteString
 runCompile globals c = runPut $ flip runReaderT globals c
 
 
@@ -90,7 +94,7 @@ functionEntry functions globals (_, fe)= do
   putUleb128 $ fromIntegral $ BL.length body
   putLazyByteString body
   where
-    body = runCompile (functions, globals, feParams fe) $ do
+    body = runCompile (CompileConfig functions globals (feParams fe)) $ do
       lift $ putUleb128 0 -- no locals
       compile $ feExpr fe
       lift $ putWord8 0x0b
@@ -105,18 +109,28 @@ compile (Infix op a b) = do
 compile (Con (Number n)) = lift $ i32Const n
 
 compile (Id iden) = do
-  (functions, globals, locals) <- ask
+  cc <- ask
   -- Check local scope, then global scope
-  case iden `elemIndex` locals of
+  case iden `elemIndex` (ccLocals cc) of
     Just idx -> do -- Use Local
       lift $ putWord8 0x20 -- get_local
       lift $ putUleb128 idx -- local index
     Nothing -> -- Use global
-      case lookup iden globals of
+      case lookup iden (ccGlobals cc) of
         Just ge -> do
           lift $ putWord8 0x23 -- get_global
           lift $ putUleb128 $ geIndex ge -- global index
         Nothing -> panic $ "Can't find binding for " <> iden
+
+compile (Call fname args) = do
+  cc <- ask
+  case lookup fname (ccFunctions cc) of
+    Just fe -> do
+      mapM_ (\arg -> compile arg) args
+      lift $ putWord8 0x10 -- call
+      lift $ putUleb128 $ feIndex fe
+    Nothing -> panic $ "Can't find function with name " <> fname
+
 
 compileOp :: Text -> Word8
 compileOp op

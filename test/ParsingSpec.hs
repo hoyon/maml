@@ -21,8 +21,8 @@ spec = do
   it "Add function" $
     parseAssert "fun add (x, y) = x + y;"
 
-  it "Multiple args" $
-    parseAssert "fun f (a, b, g) = g a b;"
+  it "Function call" $
+    parseAssert "fun f (a, b) = add (a, b);"
 
   it "Undefined operand" $
     parseRefute "val x = 3 $ 4"
