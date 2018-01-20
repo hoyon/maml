@@ -3,6 +3,7 @@ import           Check
 import           Debug.Trace
 import           Error
 import           Parser
+import           Protolude
 import           Test.Hspec
 import           Test.Hspec.Megaparsec
 import           Text.Megaparsec

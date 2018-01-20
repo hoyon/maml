@@ -1,8 +1,8 @@
 module CheckSpec (spec) where
 import           Check
-import           Debug.Trace
 import           Error
 import           Parser
+import           Protolude
 import           Test.Hspec
 import           Test.Hspec.Megaparsec
 import           Text.Megaparsec
@@ -83,7 +83,7 @@ spec = do
     checkProgram' str = do
       let ast = parseString str
       result <- runErrWarn $ ast >>= typeCheck
-      (trace ("Env: " ++ show result)result) `shouldSatisfy` success
+      (trace ("Env: " ++ show result) result) `shouldSatisfy` success
 
     checkProgramFail str = do
       let ast = parseString str
