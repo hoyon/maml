@@ -13,13 +13,12 @@ import           Test.Hspec
 
 spec :: Spec
 spec = before_ compileWat $ do
-  it "Compilation tests" $ do
-    programs <- return getPrograms
-    programs >>= (\paths -> mapM_ testCase paths)
+  describe "Test programs" $ do
+    programs <- runIO getPrograms
+    mapM_ testCase programs
 
-testCase :: FilePath -> IO ()
-testCase program = do
-  putStr $ program <> ": "
+testCase :: FilePath -> SpecWith (Arg (IO ()))
+testCase program = it program $ do
   let path = programDir <> program <> "/"
 
   mamlCode <- readFile (path <> program <> ".maml")
@@ -27,13 +26,7 @@ testCase program = do
 
   target <- BL.readFile (path <> program <> ".wasm")
 
-  if compiled == target
-    then putText "Pass"
-    else putText "Fail"
-
   compiled `shouldBe` target
-  where
-    compare a b = a == b
 
 compile :: Text -> IO BL.ByteString
 compile program = do
