@@ -1,6 +1,7 @@
 module CodeGen where
 
 import           AST
+import           CodeGen.Export
 import           CodeGen.Function
 import           CodeGen.Global
 import           CodeGen.Util
@@ -33,6 +34,6 @@ codegen' env = do
   genTypes ts
   genSigs fs
   genGlobal globals
-  -- genExport globals fs
+  genExport globals fs
   genCode fs globals
 

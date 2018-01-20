@@ -5,6 +5,7 @@ module CodeGen.Util ( section
                     , putBytes
                     , putUleb128
                     , putSleb128
+                    , putString
                     ) where
 
 import           Data.Binary.Put
@@ -62,3 +63,6 @@ putUleb128 = putBytes . uleb128
 -- | Put a number in sleb128 format
 putSleb128 :: Int -> Put
 putSleb128 = putBytes . sleb128
+
+putString :: Text -> Put
+putString = putBytes . encodeString
