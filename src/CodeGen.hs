@@ -4,6 +4,7 @@ import           AST
 import           CodeGen.Export
 import           CodeGen.Function
 import           CodeGen.Global
+import           CodeGen.Memory
 import           CodeGen.Util
 import           Data.Binary.Put
 import qualified Data.ByteString.Lazy as BL
@@ -33,6 +34,7 @@ codegen' env = do
 
   genTypes ts
   genSigs fs
+  genMemory
   genGlobal globals
   genExport globals fs
   genCode fs globals

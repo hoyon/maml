@@ -21,6 +21,7 @@ library
                      , CodeGen.Instruction
                      , CodeGen.Function
                      , CodeGen.Export
+                     , CodeGen.Memory
 
   build-depends:       base >= 4.7 && < 5,
                        binary,

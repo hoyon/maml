@@ -1,4 +1,5 @@
 (module
+    (memory 1)
     (global (export "x") i32 (i32.const 4))
     (func (export "id") (param i32) (result i32)
      get_local 0
