@@ -22,11 +22,35 @@ spec = do
   it "Add function" $
     parseAssert "fun add (x, y) = x + y;"
 
-  it "Function call" $
+  it "Single argument function call" $
+    parseAssert "fun f x = id x;"
+
+  it "Multiple argument function call" $
     parseAssert "fun f (a, b) = add (a, b);"
+
+  it "Missing semicolon" $
+    parseRefute "val x = 3 val y = 2"
+
+  it "If statement" $
+    parseAssert "fun f x = if x == 3 then 1 else 0;"
+
+  it "Missing else branch in if statement" $
+    parseRefute "fun f x = if x == 3 then 1;"
+
+  it "Parenthesis in expression" $
+    parseAssert "fun f (x, y, z) = (x + y) * z;"
 
   it "Undefined operand" $
     parseRefute "val x = 3 $ 4"
+
+  it "Unknown top level binding" $
+    parseRefute "var x = 3;"
+
+  it "Use reserved word as function name" $
+    parseRefute "fun if x = x;"
+
+  it "Use reserved word in expression" $
+    parseRefute "fun f x = if + x;"
 
   where
     parseAssert = shouldSucceedOn $ parse lang ""
