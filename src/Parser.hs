@@ -7,7 +7,7 @@ import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
 import           Text.Megaparsec.Expr
-import           Prelude (fail)
+import           Prelude (fail, String)
 
 type Parser = Parsec Void Text
 
@@ -27,7 +27,7 @@ symbol = L.symbol sc
 integer :: Parser Int
 integer = lexeme $
       L.decimal
-  <|> ((\x -> 0 - x) <$> ((char '~') >> L.decimal))
+  <|> ((\x -> 0 - x) <$> (char '~' >> L.decimal))
 
 semi :: Parser Text
 semi = symbol ";"
@@ -46,9 +46,9 @@ identifier :: Parser Text
 identifier = (lexeme . try) $ toS <$> (p >>= check)
   where
     p = (:) <$> letterChar <*> many alphaNumChar
-    check :: [Char] -> Parser Text
+    check :: String -> Parser Text
     check x =
-      if (toS x) `elem` reservedWords
+      if toS x `elem` reservedWords
       then fail $ "Cannot use reserved keyword " ++ x ++ " as identifier"
       else return $ toS x
 

@@ -94,4 +94,4 @@ addToAL l key value = (key, value) : delFromAL l key
 {- | Removes all (key, value) pairs from the given list where the key
 matches the given one. -}
 delFromAL :: Eq key => [(key, a)] -> key -> [(key, a)]
-delFromAL l key = filter (\a -> (fst a) /= key) l
+delFromAL l key = filter (\a -> fst a /= key) l

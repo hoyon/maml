@@ -12,7 +12,7 @@ import           System.IO (hGetContents)
 import           Test.Hspec
 
 spec :: Spec
-spec = before_ compileWat $ do
+spec = before_ compileWat $
   describe "Test programs" $ do
     programs <- runIO getPrograms
     mapM_ testCase programs
@@ -39,7 +39,7 @@ programDir :: FilePath
 programDir = "test/programs/"
 
 getPrograms :: IO [FilePath]
-getPrograms = listDirectory $ programDir
+getPrograms = listDirectory programDir
 
 compileWat :: IO ()
 compileWat = do
@@ -53,5 +53,5 @@ compileWat = do
       let dir = programDir <> program
       (_, _, Just herr, _) <- createProcess (proc "wat2wasm" [input, "-o", output]) { std_err = CreatePipe, cwd = Just dir}
       err <- hGetContents herr
-      unless (length err == 0) $ putStrLn $ "Error compiling " <> output <> ": \n" <> err
+      unless (null err) $ putStrLn $ "Error compiling " <> output <> ": \n" <> err
 

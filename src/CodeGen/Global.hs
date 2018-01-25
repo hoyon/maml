@@ -38,7 +38,7 @@ genGlobal :: GlobalMap -> Put
 genGlobal globals = section globalSectionCode $
   when (count > 0) $ do
     putUleb128 count
-    mapM_ globalEntry $ map snd globals
+    mapM_ (globalEntry . snd) globals
   where
     count = length globals
 

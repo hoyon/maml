@@ -1,6 +1,5 @@
 module ParsingSpec (spec) where
 import           Check
-import           Debug.Trace
 import           Error
 import           Parser
 import           Protolude

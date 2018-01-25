@@ -83,7 +83,8 @@ spec = do
     checkProgram' str = do
       let ast = parseString str
       result <- runErrWarn $ ast >>= typeCheck
-      (trace ("Env: " ++ show result) result) `shouldSatisfy` success
+      putStrLn $ "Env: " ++ show result
+      result `shouldSatisfy` success
 
     checkProgramFail str = do
       let ast = parseString str

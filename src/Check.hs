@@ -8,7 +8,7 @@ import qualified Data.Map             as Map
 import           Env
 import           Error
 import           Formatting
-import           Protolude            hiding (Infix, (%))
+import           Protolude            hiding (Infix)
 import           Type
 
 newtype Check a = Check { unCheck :: StateT EnvStack ErrWarn a }
@@ -58,7 +58,7 @@ typeDec _ (BdVal expr) = do
     TpInt -> return TpInt
     _     -> throwError $ OtherError "Bindings must be integers"
 
-typeDec _ (BdConst con) = do
+typeDec _ (BdConst con) =
   case con of
     Number _ -> return TpInt
     _        -> throwError $ OtherError "Bindings must be integers"

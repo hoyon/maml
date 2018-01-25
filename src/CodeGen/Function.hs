@@ -40,7 +40,7 @@ data CompileConfig = CompileConfig { ccFunctions :: FunctionMap
                                    }
 type Compile = ReaderT CompileConfig PutM ()
 runCompile :: CompileConfig -> Compile -> BL.ByteString
-runCompile globals c = runPut $ flip runReaderT globals c
+runCompile globals c = runPut $ runReaderT c globals
 
 
 getFunctions :: Env -> ([TypeEntry], FunctionMap)
@@ -82,7 +82,7 @@ typeEntry (TypeEntry args ret) = do
 genSigs :: FunctionMap -> Put
 genSigs fs = section functionSectionCode $ do
   putUleb128 $ length fs
-  putBytes $ concatMap (\fn -> uleb128 $ feTypeIndex $ snd fn) fs
+  putBytes $ concatMap (uleb128 . feTypeIndex . snd) fs
 
 genCode :: FunctionMap -> GlobalMap -> Put
 genCode functions globals = section codeSectionCode $ do
@@ -111,7 +111,7 @@ compile (Con (Number n)) = lift $ i32Const n
 compile (Id iden) = do
   cc <- ask
   -- Check local scope, then global scope
-  case iden `elemIndex` (ccLocals cc) of
+  case iden `elemIndex` ccLocals cc of
     Just idx -> do -- Use Local
       lift $ putWord8 0x20 -- get_local
       lift $ putUleb128 idx -- local index
@@ -126,7 +126,7 @@ compile (Call fname args) = do
   cc <- ask
   case lookup fname (ccFunctions cc) of
     Just fe -> do
-      mapM_ (\arg -> compile arg) args
+      mapM_ compile args
       lift $ putWord8 0x10 -- call
       lift $ putUleb128 $ feIndex fe
     Nothing -> panic $ "Can't find function with name " <> fname
