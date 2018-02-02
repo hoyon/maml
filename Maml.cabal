@@ -8,13 +8,14 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Parser,
-                       AST,
-                       Check,
-                       Error,
-                       Type,
-                       Env,
-                       CodeGen
+  exposed-modules:     Parser
+                     , AST
+                     , Check
+                     , Error
+                     , Type
+                     , Env
+                     , CodeGen
+                     , Linker
 
   other-modules:       CodeGen.Util
                      , CodeGen.Global
@@ -23,16 +24,19 @@ library
                      , CodeGen.Export
                      , CodeGen.Memory
 
-  build-depends:       base >= 4.7 && < 5,
-                       binary,
-                       bytestring,
-                       containers,
-                       formatting,
-                       megaparsec >= 6.2 && < 7,
-                       mtl,
-                       protolude >= 0.2,
-                       text,
-                       transformers
+                     , Linker.Parse
+
+  build-depends:       base >= 4.7 && < 5
+                     , binary
+                     , bytestring
+                     , containers
+                     , formatting
+                     , megaparsec >= 6.2 && < 7
+                     , mtl
+                     , protolude >= 0.2
+                     , text
+                     , transformers
+                     , monad-loops
   default-language:    Haskell2010
   default-extensions:  OverloadedStrings
                      , NoImplicitPrelude
