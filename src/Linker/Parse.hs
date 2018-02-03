@@ -71,7 +71,9 @@ data CodeEntry = CodeEntry
   deriving (Show)
 
 data LocalEntry = LocalEntry
-  { leEntries :: [Type] }
+  { leCount :: Int
+  , leType  :: Type
+  }
   deriving (Show)
 
 data CodeSection = CodeSection
@@ -242,7 +244,8 @@ codeEntry = do
 localEntry :: Get LocalEntry
 localEntry = do
   count <- getUleb128
-  LocalEntry <$> replicateM count getType
+  t <- getType
+  return $ LocalEntry count t
 
 -- | Decode a uleb128 value
 getUleb128 :: Get Int
