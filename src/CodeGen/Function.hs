@@ -1,15 +1,15 @@
 module CodeGen.Function where
 
 import           AST
+import           CodeGen.Global
 import           CodeGen.Instruction
 import           CodeGen.Util
-import           CodeGen.Global
 import           Data.Binary.Put
 import qualified Data.ByteString.Lazy as BL
 import           Data.List            (elemIndex, lookup)
 import qualified Data.Map             as Map
 import           Env
-import           Protolude            hiding (Infix)
+import           Protolude            hiding (Infix, Type)
 import           Type
 
 typeSectionCode :: Word8

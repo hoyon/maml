@@ -3,10 +3,10 @@ module Linker.Parse where
 import           Control.Monad
 import           Control.Monad.Loops
 import           Data.Binary.Get
+import qualified Data.ByteString      as BS
 import qualified Data.ByteString.Lazy as BL
-import           Protolude
 import           Data.Text.Encoding
-import qualified Data.ByteString as BS
+import           Protolude hiding (Type)
 
 data Section s = Section
   { sectionId     :: Int
@@ -54,8 +54,8 @@ data ExportKind
   deriving (Show)
 
 data ExportEntry = ExportEntry
-  { eeName :: Text
-  , eeKind :: ExportKind
+  { eeName  :: Text
+  , eeKind  :: ExportKind
   , eeIndex :: Int
   }
   deriving (Show)

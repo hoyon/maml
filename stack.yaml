@@ -3,6 +3,6 @@ extra-package-dbs: []
 packages:
 - .
 extra-deps:
-resolver: lts-10.3
+resolver: lts-10.5
 ghc-options:
     "$locals": -fhide-source-paths

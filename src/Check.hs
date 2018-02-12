@@ -8,7 +8,7 @@ import qualified Data.Map             as Map
 import           Env
 import           Error
 import           Formatting
-import           Protolude            hiding (Infix)
+import           Protolude            hiding (Infix, Type)
 import           Type
 
 newtype Check a = Check { unCheck :: StateT EnvStack ErrWarn a }

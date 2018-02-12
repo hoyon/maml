@@ -2,7 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Error where
 
-import Protolude
+import Protolude hiding (Type)
 import Type
 import Control.Monad.Writer
 

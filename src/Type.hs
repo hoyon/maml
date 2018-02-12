@@ -1,6 +1,6 @@
 module Type where
 
-import Protolude
+import           Protolude hiding (Type)
 
 data Type
   = TpInt
