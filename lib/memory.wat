@@ -16,7 +16,7 @@
   (memory (export "mem") 1)
 
   ;; Initialise memory
-  (func $init
+  (func $init (export "init")
         ;; First free block of memory
         (i32.store (i32.const 0) (i32.const 1032))
         )
@@ -26,7 +26,7 @@
         )
 
   ;; Allocate a given amount of bytes
-  (func $allocate 
+  (func $allocate (export "allocate")
         (param
           i32) ;; number of bytes to allocate
         (result
@@ -57,7 +57,7 @@
         i32.add
         )
 
-  (func $allocate_global
+  (func $allocate_global (export "allocate_global")
         (param
           i32) ;; Size of global
         (result
@@ -87,7 +87,7 @@
         get_local 2 ;; Return index of global
         )
 
-  (func $get_global
+  (func $get_global (export "get_global")
         (param
           i32) ;; Index of global
         (result

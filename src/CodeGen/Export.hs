@@ -16,15 +16,22 @@ globalKind = 3
 functionKind :: Word8
 functionKind = 0
 
-genExport :: GlobalMap -> FunctionMap -> Put
+genExport :: GlobalMap -> [FunctionEntry] -> Put
 genExport globals functions = section exportSectionCode $
   when (count > 0) $ do
     putUleb128 count
     mapM_ (\(iden, ge) -> exportEntry iden (geIndex ge) globalKind) globals
-    mapM_ (\(iden, fe) -> exportEntry iden (feIndex fe) functionKind) functions
+    mapM_ exportFunction functions
 
   where
-    count = length globals + length functions
+    count = length globals + length (filter isExported functions)
+
+    isExported FunctionEntry{} = True
+    isExported BuiltinFunctionEntry{} = False
+
+exportFunction :: FunctionEntry -> Put
+exportFunction fe@FunctionEntry{} = exportEntry (feName fe) (feIndex fe) functionKind
+exportFunction BuiltinFunctionEntry{} = return ()
 
 exportEntry
   :: Text   -- ^ Entry name

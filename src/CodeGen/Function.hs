@@ -6,11 +6,12 @@ import           CodeGen.Instruction
 import           CodeGen.Util
 import           Data.Binary.Put
 import qualified Data.ByteString.Lazy as BL
-import           Data.List            (elemIndex, lookup)
+import           Data.List            (elemIndex, lookup, (!!))
 import qualified Data.Map             as Map
 import           Env
 import           Protolude            hiding (Infix, Type)
 import           Type
+import           WasmParse
 
 typeSectionCode :: Word8
 typeSectionCode = 1
@@ -21,20 +22,21 @@ functionSectionCode = 3
 codeSectionCode :: Word8
 codeSectionCode = 10
 
-data TypeEntry = TypeEntry [Type] Type
-  deriving (Show, Eq)
-
 data FunctionEntry = FunctionEntry { feIndex     :: Int
+                                   , feName      :: Text
                                    , feParams    :: [Text]
                                    , feExpr      :: Expr
                                    , feTypeIndex :: Int
                                    }
+                   | BuiltinFunctionEntry { bfeIndex     :: Int
+                                          , bfeTypeIndex :: Int
+                                          , bfeLocals    :: [LocalEntry]
+                                          , bfeCode      :: [Word8]
+                                          }
   deriving (Show)
 
-type FunctionMap = [(Text, FunctionEntry)]
-
 type Locals = [Text]
-data CompileConfig = CompileConfig { ccFunctions :: FunctionMap
+data CompileConfig = CompileConfig { ccFunctions :: [FunctionEntry]
                                    , ccGlobals   :: GlobalMap
                                    , ccLocals    :: Locals
                                    }
@@ -43,16 +45,33 @@ runCompile :: CompileConfig -> Compile -> BL.ByteString
 runCompile globals c = runPut $ runReaderT c globals
 
 
-getFunctions :: Env -> ([TypeEntry], FunctionMap)
-getFunctions env = foldl f ([], []) (filter isFunction env)
+getFunctions :: Wasm -> Env -> ([TypeEntry], [FunctionEntry])
+getFunctions wasm env = foldl f (builtinTypes, builtinFunctionEntries) (filter isFunction env)
   where
+    -- Get builtin type entries and function entires
+    exportedFunctions = filter (\e -> eeKind e == EkFunction) $ esEntries $ sectionData $ wasmExport wasm
+    builtinFunctionIndices = fsEntries $ sectionData $ wasmFunction wasm
+    builtinCodeEntries = csEntries $ sectionData $ wasmCode wasm
+    builtinFunctionEntries = mapInd (\f i ->
+                                       BuiltinFunctionEntry (eeIndex f)
+                                       (builtinFunctionIndices !! i)
+                                       (ceLocals $ builtinCodeEntries !! i)
+                                       (ceCode $ builtinCodeEntries !! i)
+                                    )
+                              exportedFunctions
+
+    builtinTypes = tsEntries $ sectionData $ wasmType wasm
+
+    -- Map with index
+    mapInd f l = zipWith f l [0..]
+
     isFunction (_, BdFun{}) = True
     isFunction _            = False
 
-    makeTypeEntry (BdFun args _) = TypeEntry (map (const TpInt) args) TpInt
-    makeFuncEntry name (BdFun args expr) idx typeIdx = (name, FunctionEntry idx args expr typeIdx)
+    makeTypeEntry (BdFun args _) = TypeEntry (map (const I32) args) (Just I32)
+    makeFuncEntry name (BdFun args expr) idx typeIdx = FunctionEntry idx name args expr typeIdx
 
-    f :: ([TypeEntry], FunctionMap) -> (Text, Binding) -> ([TypeEntry], FunctionMap)
+    f :: ([TypeEntry], [FunctionEntry]) -> (Text, Binding) -> ([TypeEntry], [FunctionEntry])
     f (ts, fs) (name, binding) = let te = makeTypeEntry binding
                                      tIdx = elemIndex te ts
                                  in case tIdx of
@@ -71,33 +90,47 @@ typeEntry (TypeEntry args ret) = do
   putWord8 0x60 -- Func type code
   putUleb128 $ length args
   putBytes $ map type2byte args
-  putWord8 0x01 -- One return type
-  putWord8 $ type2byte ret
-  where
-    type2byte :: Type -> Word8
-    type2byte TpInt  = 0x7f
-    type2byte TpBool = 0x7f
-    type2byte t      = panic $ "Can't gen this type yet: " <> show t
+  case ret of
+    Just t -> do
+      putWord8 0x01 -- One return type
+      putWord8 $ type2byte t
+    Nothing -> putWord8 0x0 -- No return type
 
-genSigs :: FunctionMap -> Put
+genSigs :: [FunctionEntry] -> Put
 genSigs fs = section functionSectionCode $ do
   putUleb128 $ length fs
-  putBytes $ concatMap (uleb128 . feTypeIndex . snd) fs
+  putBytes $ concatMap (uleb128 . typeIndex) fs
 
-genCode :: FunctionMap -> GlobalMap -> Put
+  where
+    typeIndex fe@FunctionEntry{}        = feTypeIndex fe
+    typeIndex fe@BuiltinFunctionEntry{} = bfeTypeIndex fe
+
+genCode :: [FunctionEntry] -> GlobalMap -> Put
 genCode functions globals = section codeSectionCode $ do
   putUleb128 $ length functions
   mapM_ (functionEntry functions globals) functions
 
-functionEntry :: FunctionMap -> GlobalMap -> (Text, FunctionEntry) -> Put
-functionEntry functions globals (_, fe)= do
+functionEntry :: [FunctionEntry] -> GlobalMap -> FunctionEntry -> Put
+functionEntry functions globals fe = do
   putUleb128 $ fromIntegral $ BL.length body
   putLazyByteString body
   where
-    body = runCompile (CompileConfig functions globals (feParams fe)) $ do
-      lift $ putUleb128 0 -- no locals
-      compile $ feExpr fe
-      lift $ putWord8 0x0b
+    body = runCompile (CompileConfig functions globals (feParams fe)) $
+      case fe of
+        FunctionEntry{} -> do
+          lift $ putUleb128 0 -- no locals
+          compile $ feExpr fe
+          lift $ putWord8 0x0b
+        BuiltinFunctionEntry{} -> do
+          let locals = bfeLocals fe
+          lift $ putUleb128 $ length locals
+          mapM_ putLocalEntry locals
+          lift $ putBytes $ bfeCode fe
+          lift $ putWord8 0x0b
+
+    putLocalEntry le = do
+      lift $ putUleb128 $ leCount le
+      lift $ putWord8 $ type2byte $ leType le
 
 -- | Main expression compiling function
 compile :: Expr -> Compile
@@ -124,12 +157,18 @@ compile (Id iden) = do
 
 compile (Call fname args) = do
   cc <- ask
-  case lookup fname (ccFunctions cc) of
+  case findFunc fname (ccFunctions cc) of
     Just fe -> do
       mapM_ compile args
       lift $ putWord8 0x10 -- call
       lift $ putUleb128 $ feIndex fe
     Nothing -> panic $ "Can't find function with name " <> fname
+  where
+    findFunc key [] = Nothing
+    findFunc key (fe@(FunctionEntry _ name _ _ _):fs)
+      | key == name = Just fe
+      | otherwise = findFunc key fs
+    findFunc key (_:fs) = findFunc key fs
 
 
 compileOp :: Text -> Word8
@@ -138,3 +177,7 @@ compileOp op
   | op == "-" = i32Sub
   | op == "*" = i32Mul
   | op == "/" = i32DivU
+
+type2byte :: WasmType -> Word8
+type2byte I32 = 0x7f
+type2byte t   = panic $ "Can't gen this type yet: " <> show t

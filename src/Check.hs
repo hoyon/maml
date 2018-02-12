@@ -10,9 +10,10 @@ import           Error
 import           Formatting
 import           Protolude            hiding (Infix, Type)
 import           Type
+import           WasmParse
 
 newtype Check a = Check { unCheck :: StateT EnvStack ErrWarn a }
-  deriving (Functor, Applicative, Monad, MonadState EnvStack, MonadWriter [Warning], MonadError Error)
+  deriving (Functor, Applicative, Monad, MonadState EnvStack, MonadWriter [Warning], MonadError Error, MonadReader Wasm)
 
 -- | Execute Type Check monad
 execCheck :: Binding -> Text -> EnvStack -> ErrWarn EnvStack

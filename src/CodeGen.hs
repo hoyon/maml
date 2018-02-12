@@ -12,6 +12,7 @@ import qualified Data.Map             as Map
 import           Env
 import           Error
 import           Protolude
+import           WasmParse
 
 -- | Magic bytes to start output
 magic :: [Word8]
@@ -22,15 +23,17 @@ version :: [Word8]
 version = [0x01, 0x0, 0x0, 0x0]
 
 codegen :: Env -> ErrWarn LByteString
-codegen e = return $ runPut $ codegen' e
+codegen e = do
+  wasm <- ask
+  return $ runPut $ codegen' e wasm
 
-codegen' :: Env -> Put
-codegen' env = do
+codegen' :: Env -> Wasm -> Put
+codegen' env wasm = do
   putBytes magic
   putBytes version
 
   let globals = getGlobals env
-  let (ts, fs) = getFunctions env
+  let (ts, fs) = getFunctions wasm env
 
   genTypes ts
   genSigs fs

@@ -15,7 +15,7 @@ library
                      , Type
                      , Env
                      , CodeGen
-                     , Linker
+                     , WasmParse
 
   other-modules:       CodeGen.Util
                      , CodeGen.Global
@@ -23,8 +23,6 @@ library
                      , CodeGen.Function
                      , CodeGen.Export
                      , CodeGen.Memory
-
-                     , Linker.Parse
 
   build-depends:       base >= 4.7 && < 5
                      , binary

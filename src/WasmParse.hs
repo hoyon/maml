@@ -1,12 +1,32 @@
-module Linker.Parse where
+{-# LANGUAGE TemplateHaskell #-}
+module WasmParse
+  ( Section(..)
+  , WasmType(..)
+  , TypeEntry(..)
+  , TypeSection(..)
+  , FunctionSection(..)
+  , GlobalEntry(..)
+  , GlobalSection(..)
+  , ExportKind(..)
+  , ExportEntry(..)
+  , ExportSection(..)
+  , CodeEntry(..)
+  , LocalEntry(..)
+  , CodeSection(..)
+  , VerbatimSection(..)
+  , Wasm(..)
+  , stdLib
+  )
+where
 
 import           Control.Monad
 import           Control.Monad.Loops
 import           Data.Binary.Get
 import qualified Data.ByteString      as BS
 import qualified Data.ByteString.Lazy as BL
+import           Data.FileEmbed
 import           Data.Text.Encoding
-import           Protolude hiding (Type)
+import           Protolude            hiding (Type)
 
 data Section s = Section
   { sectionId     :: Int
@@ -15,18 +35,18 @@ data Section s = Section
   } | EmptySection
   deriving (Show)
 
-data Type
+data WasmType
   = I32
   | I64
   | F32
   | F64
-  deriving (Show)
+  deriving (Show, Eq)
 
 data TypeEntry = TypeEntry
-  { teParams  :: [Type]
-  , teResults :: [Type]
+  { teParams :: [WasmType]
+  , teResult :: Maybe WasmType
   }
-  deriving (Show)
+  deriving (Show, Eq)
 
 newtype TypeSection = TypeSection
   { tsEntries :: [TypeEntry] }
@@ -37,7 +57,7 @@ newtype FunctionSection = FunctionSection
   deriving (Show)
 
 data GlobalEntry = GlobalEntry
-  { geType :: Type
+  { geType :: WasmType
   , geExpr :: [Word8] -- Includes end byte
   }
   deriving (Show)
@@ -51,7 +71,7 @@ data ExportKind
   | EkFunction
   | EkMemory
   | EkTable
-  deriving (Show)
+  deriving (Show, Eq)
 
 data ExportEntry = ExportEntry
   { eeName  :: Text
@@ -72,11 +92,11 @@ data CodeEntry = CodeEntry
 
 data LocalEntry = LocalEntry
   { leCount :: Int
-  , leType  :: Type
+  , leType  :: WasmType
   }
   deriving (Show)
 
-data CodeSection = CodeSection
+newtype CodeSection = CodeSection
   { csEntries :: [CodeEntry] }
   deriving (Show)
 
@@ -163,11 +183,12 @@ typeEntry = do
   unless (func == 0x60) (fail "Type must be func")
   paramCount <- getUleb128
   params <- replicateM paramCount getType
-  resultCount <- getUleb128
-  results <- replicateM resultCount getType
-  return $ TypeEntry params results
+  resultCount <- getWord8
+  unless (resultCount <= 0x01) (fail "Multiple return values not allowed")
+  result <- replicateM (fromIntegral resultCount) getType
+  return $ TypeEntry params (head result)
 
-getType :: Get Type
+getType :: Get WasmType
 getType = do
   byte <- getWord8
   case byte of
@@ -235,7 +256,7 @@ codeEntry = do
   locals <- replicateM localCount localEntry
   end <- bytesRead
 
-  let codeLength = size - (fromIntegral (end - start)) - 1
+  let codeLength = size - fromIntegral (end - start) - 1
 
   code <- replicateM codeLength getWord8
   skip 1 -- skip end byte
@@ -258,3 +279,9 @@ getUleb128 = getUleb128' 0 0
       if (byte .&. 0x80) == 0
         then return a
         else getUleb128' a (s + 7)
+
+stdLibRaw :: BS.ByteString
+stdLibRaw = $(embedFile "lib/memory.wasm")
+
+stdLib :: Wasm
+stdLib = parseWasm (BL.fromStrict stdLibRaw)

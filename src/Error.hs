@@ -5,13 +5,15 @@ module Error where
 import Protolude hiding (Type)
 import Type
 import Control.Monad.Writer
+import Control.Monad.Reader
+import WasmParse
 
-newtype ErrWarn a = ErrWarn { unErrWarn :: WriterT [Warning] (ExceptT Error IO) a }
-  deriving (Functor, Applicative, Monad, MonadWriter [Warning], MonadError Error)
+newtype ErrWarn a = ErrWarn { unErrWarn :: ReaderT Wasm (WriterT [Warning] (ExceptT Error IO)) a }
+  deriving (Functor, Applicative, Monad, MonadWriter [Warning], MonadError Error, MonadReader Wasm)
 
-runErrWarn :: ErrWarn a -> IO (Either Error a)
-runErrWarn ew = do
-  res <- runExceptT . runWriterT $ unErrWarn ew
+runErrWarn :: Wasm -> ErrWarn a -> IO (Either Error a)
+runErrWarn wasm ew = do
+  res <- runExceptT . runWriterT $ runReaderT (unErrWarn ew) wasm
   case res of
     Left e -> return $ Left e
     Right (a, w) -> do
