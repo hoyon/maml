@@ -121,7 +121,7 @@ data Wasm = Wasm
   }
   deriving (Show)
 
-parseWasm :: BL.ByteString -> Wasm
+parseWasm :: LByteString -> Wasm
 parseWasm = runGet parseWasm'
 
 parseWasm' :: Get Wasm
@@ -281,7 +281,7 @@ getUleb128 = getUleb128' 0 0
         then return a
         else getUleb128' a (s + 7)
 
-stdLibRaw :: BS.ByteString
+stdLibRaw :: ByteString
 stdLibRaw = $(embedFile "lib/memory.wasm")
 
 stdLib :: Wasm

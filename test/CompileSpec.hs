@@ -29,7 +29,7 @@ testCase program = it program $ do
 
   compiled `shouldBe` target
 
-compile :: Text -> IO BL.ByteString
+compile :: Text -> IO LByteString
 compile program = do
   result <- runErrWarn stdLib $ parseString program >>= typeCheck >>= codegen
   case result of
