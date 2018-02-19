@@ -6,6 +6,7 @@ import           Protolude
 import           Test.Hspec
 import           Test.Hspec.Megaparsec
 import           Text.Megaparsec
+import           WasmParse
 
 spec :: Spec
 spec = do
@@ -77,18 +78,18 @@ spec = do
   where
     checkProgram str = do
       let ast = parseString str
-      result <- runErrWarn $ ast >>= typeCheck
+      result <- runErrWarn stdLib $ ast >>= typeCheck
       result `shouldSatisfy` success
 
     checkProgram' str = do
       let ast = parseString str
-      result <- runErrWarn $ ast >>= typeCheck
+      result <- runErrWarn stdLib $ ast >>= typeCheck
       putStrLn $ "Env: " ++ show result
       result `shouldSatisfy` success
 
     checkProgramFail str = do
       let ast = parseString str
-      result <- runErrWarn $ ast >>= typeCheck
+      result <- runErrWarn stdLib $ ast >>= typeCheck
       result `shouldSatisfy` fail
 
     success (Left _)  = False

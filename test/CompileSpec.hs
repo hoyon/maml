@@ -10,6 +10,7 @@ import           System.IO.Error
 import           System.Process
 import           System.IO (hGetContents)
 import           Test.Hspec
+import           WasmParse
 
 spec :: Spec
 spec = before_ compileWat $
@@ -30,7 +31,7 @@ testCase program = it program $ do
 
 compile :: Text -> IO BL.ByteString
 compile program = do
-  result <- runErrWarn $ parseString program >>= typeCheck >>= codegen
+  result <- runErrWarn stdLib $ parseString program >>= typeCheck >>= codegen
   case result of
     Right x -> return x
     Left e  -> throwIO (userError (show e))
