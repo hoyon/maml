@@ -16,7 +16,6 @@ import           Data.List (elemIndices, lookup)
 data Binding
   = BdVal Expr
   | BdFun [Text] Expr
-  | BdConst Constant
   deriving Show
 
 type BindingPair = (Text, Binding)
@@ -57,8 +56,6 @@ createEnv :: AST -> ErrWarn Env
 createEnv ast = map makeEnv <$> checkNames ast
 
 makeEnv :: Dec -> (Text, Binding)
-makeEnv (Val x (Con c))   = case c of
-                              Number _ -> (x, BdConst c)
 makeEnv (Val x expr)      = (x, BdVal expr)
 makeEnv (Fun x args expr) = (x, BdFun args expr)
 

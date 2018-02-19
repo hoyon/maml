@@ -1,7 +1,8 @@
 module CodeGen.Function where
 
 import           AST
-import           CodeGen.Global
+import           CodeGen.Types
+import           CodeGen.Expr
 import           CodeGen.Instruction
 import           CodeGen.Util
 import           Data.Binary.Put
@@ -21,29 +22,6 @@ functionSectionCode = 3
 
 codeSectionCode :: Word8
 codeSectionCode = 10
-
-data FunctionEntry = FunctionEntry { feIndex     :: Int
-                                   , feName      :: Text
-                                   , feParams    :: [Text]
-                                   , feExpr      :: Expr
-                                   , feTypeIndex :: Int
-                                   }
-                   | BuiltinFunctionEntry { bfeIndex     :: Int
-                                          , bfeTypeIndex :: Int
-                                          , bfeLocals    :: [LocalEntry]
-                                          , bfeCode      :: [Word8]
-                                          }
-  deriving (Show)
-
-type Locals = [Text]
-data CompileConfig = CompileConfig { ccFunctions :: [FunctionEntry]
-                                   , ccGlobals   :: GlobalMap
-                                   , ccLocals    :: Locals
-                                   }
-type Compile = ReaderT CompileConfig PutM ()
-runCompile :: CompileConfig -> Compile -> BL.ByteString
-runCompile globals c = runPut $ runReaderT c globals
-
 
 getFunctions :: Wasm -> Env -> ([TypeEntry], [FunctionEntry])
 getFunctions wasm env = foldl f (builtinTypes, builtinFunctionEntries) (filter isFunction env)
@@ -131,52 +109,6 @@ functionEntry functions globals fe = do
     putLocalEntry le = do
       lift $ putUleb128 $ leCount le
       lift $ putWord8 $ type2byte $ leType le
-
--- | Main expression compiling function
-compile :: Expr -> Compile
-compile (Infix op a b) = do
-  compile a
-  compile b
-  lift $ putWord8 $ compileOp op
-
-compile (Con (Number n)) = lift $ i32Const n
-
-compile (Id iden) = do
-  cc <- ask
-  -- Check local scope, then global scope
-  case iden `elemIndex` ccLocals cc of
-    Just idx -> do -- Use Local
-      lift $ putWord8 0x20 -- get_local
-      lift $ putUleb128 idx -- local index
-    Nothing -> -- Use global
-      case lookup iden (ccGlobals cc) of
-        Just ge -> do
-          lift $ putWord8 0x23 -- get_global
-          lift $ putUleb128 $ geIndex ge -- global index
-        Nothing -> panic $ "Can't find binding for " <> iden
-
-compile (Call fname args) = do
-  cc <- ask
-  case findFunc fname (ccFunctions cc) of
-    Just fe -> do
-      mapM_ compile args
-      lift $ putWord8 0x10 -- call
-      lift $ putUleb128 $ feIndex fe
-    Nothing -> panic $ "Can't find function with name " <> fname
-  where
-    findFunc key [] = Nothing
-    findFunc key (fe@(FunctionEntry _ name _ _ _):fs)
-      | key == name = Just fe
-      | otherwise = findFunc key fs
-    findFunc key (_:fs) = findFunc key fs
-
-
-compileOp :: Text -> Word8
-compileOp op
-  | op == "+" = i32Add
-  | op == "-" = i32Sub
-  | op == "*" = i32Mul
-  | op == "/" = i32DivU
 
 type2byte :: WasmType -> Word8
 type2byte I32 = 0x7f

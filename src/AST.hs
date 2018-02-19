@@ -15,6 +15,7 @@ data Expr
   | Id Text
   | Infix Text Expr Expr
   | Call Text [Expr]
+  | CallBuiltin Text -- Assumes arguements are already on stack
   deriving Show
 
 data Dec

@@ -4,4 +4,4 @@ run: memory.wasm
 memory.wasm: memory.wat
 	wat2wasm memory.wat -o memory.wasm
 
-.SILENT:run memory.wasm
+.SILENT:run

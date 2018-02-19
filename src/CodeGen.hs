@@ -2,9 +2,11 @@ module CodeGen where
 
 import           AST
 import           CodeGen.Export
+import           CodeGen.Expr
 import           CodeGen.Function
-import           CodeGen.Global
 import           CodeGen.Memory
+import           CodeGen.Types
+import           CodeGen.Start
 import           CodeGen.Util
 import           Data.Binary.Put
 import qualified Data.ByteString.Lazy as BL
@@ -34,11 +36,15 @@ codegen' env wasm = do
 
   let globals = getGlobals env
   let (ts, fs) = getFunctions wasm env
+  let start = makeStartFunction env fs ts
+
+  let fs2 = fs ++ [start] -- add start to end of functions
 
   genTypes ts
-  genSigs fs
+  genSigs fs2
   genMemory
-  genGlobal globals
-  genExport globals fs
-  genCode fs globals
+  -- genGlobal globals
+  genExport globals fs2
+  genStart $ bfeIndex start
+  genCode fs2 globals
 

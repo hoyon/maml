@@ -16,6 +16,7 @@ module WasmParse
   , VerbatimSection(..)
   , Wasm(..)
   , stdLib
+  , stdLibExported
   )
 where
 
@@ -285,3 +286,8 @@ stdLibRaw = $(embedFile "lib/memory.wasm")
 
 stdLib :: Wasm
 stdLib = parseWasm (BL.fromStrict stdLibRaw)
+
+stdLibExported :: [(Text, Int)]
+stdLibExported = map (\e -> (eeName e, eeIndex e)) entries
+  where
+    entries = esEntries $ sectionData $ wasmExport stdLib

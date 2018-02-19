@@ -12,7 +12,6 @@
 ;; Total size of reserved memory: 4 + 1028 = 1032
 
 (module
-  (import "host" "print" (func $print (param i32)))
   (memory (export "mem") 1)
 
   ;; Initialise memory
@@ -87,6 +86,23 @@
         get_local 2 ;; Return index of global
         )
 
+  (func $allocate_global_i32 (export "allocate_global_i32")
+        (param
+         i32) ;; Initial value
+        (result
+         i32) ;; Index of global
+        (local
+         i32) ;; Index of global
+
+        (call $allocate_global (i32.const 4)) ;; allocate 4 bytes (sizeof i32)
+        tee_local 1 ;; store index
+        call $get_global
+        get_local 0 ;; initial value
+        i32.store 
+        
+        get_local 1 ;; return index
+   )
+
   (func $get_global (export "get_global")
         (param
           i32) ;; Index of global
@@ -100,25 +116,26 @@
         i32.load ;; Get address stored in this entry
         )
 
-
   (func (export "main") (result i32)
         call $init
 
         (call $allocate_global (i32.const 64))
-        call $print
+        drop
         (call $allocate_global (i32.const 8))
-        call $print
+        drop
 
         (call $get_global (i32.const 0))
         i32.const -1
         i32.store
 
         (call $get_global (i32.const 1))
-        call $print
+        drop
 
         ;; call $first_free
-        (i32.load (i32.const 0))
-
+        ;; (i32.load (i32.const 0))
+        (call $allocate_global_i32 (i32.const 100))
+        call $get_global
+        i32.load
         )
   )
 

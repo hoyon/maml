@@ -18,11 +18,13 @@ library
                      , WasmParse
 
   other-modules:       CodeGen.Util
-                     , CodeGen.Global
+                     , CodeGen.Expr
                      , CodeGen.Instruction
                      , CodeGen.Function
                      , CodeGen.Export
                      , CodeGen.Memory
+                     , CodeGen.Start
+                     , CodeGen.Types
 
   build-depends:       base >= 4.7 && < 5
                      , binary

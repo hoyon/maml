@@ -3,10 +3,12 @@
 (*val c = (2, 3); *)
 (* val unit = (); *)
 (* fun w x = while true do 3; *)
-(*val y = 3;*)
 fun id x = x;
 fun f1 (x, y) = x + y;
 fun f2 x = f1 (x, x);
+
+val y = f1 (1, 2);
+fun addY x = x + y;
 (* fun f3 (x, y) = 3 + x; *)
 (* fun f4 (x, y) = (while true do 3) * 3; *)
 

@@ -3,6 +3,8 @@ module CodeGen.Instruction ( i32Const
                            , i32Sub
                            , i32Mul
                            , i32DivU
+                           , i32Load
+                           , i32Store
                            )where
 
 import           CodeGen.Util
@@ -45,3 +47,8 @@ i32And, i32Or, i32Xor :: Word8
 i32And = 0x71
 i32Or  = 0x72
 i32Xor = 0x73
+
+-- 32bit load and store
+i32Load, i32Store :: [Word8]
+i32Load = [0x28, 0x02, 0x00]
+i32Store = [0x36, 0x02, 0x00]

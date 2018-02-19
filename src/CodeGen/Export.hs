@@ -2,7 +2,8 @@ module CodeGen.Export ( genExport
                       ) where
 
 import           CodeGen.Function
-import           CodeGen.Global
+import           CodeGen.Start
+import           CodeGen.Types
 import           CodeGen.Util
 import           Data.Binary.Put
 import           Protolude
@@ -20,13 +21,14 @@ genExport :: GlobalMap -> [FunctionEntry] -> Put
 genExport globals functions = section exportSectionCode $
   when (count > 0) $ do
     putUleb128 count
-    mapM_ (\(iden, ge) -> exportEntry iden (geIndex ge) globalKind) globals
+    -- mapM_ (\(iden, ge) -> exportEntry iden (mgeIndex ge) globalKind) globals
     mapM_ exportFunction functions
 
   where
-    count = length globals + length (filter isExported functions)
+    count = -- length globals +
+      length (filter isExported functions)
 
-    isExported FunctionEntry{} = True
+    isExported FunctionEntry{}        = True
     isExported BuiltinFunctionEntry{} = False
 
 exportFunction :: FunctionEntry -> Put

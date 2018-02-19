@@ -59,11 +59,6 @@ typeDec _ (BdVal expr) = do
     TpInt -> return TpInt
     _     -> throwError $ OtherError "Bindings must be integers"
 
-typeDec _ (BdConst con) =
-  case con of
-    Number _ -> return TpInt
-    _        -> throwError $ OtherError "Bindings must be integers"
-
 typeDec name (BdFun args expr) = do
 
   env <- get
@@ -125,7 +120,6 @@ typeExpr (Id iden) = do
   case findEnv iden env of
     -- XXX Beware of recursive definitions!
     Just (BdVal _)   -> return TpInt
-    Just (BdConst _) -> return TpInt
     _                -> throwError $ NotDefined iden
 
 typeExpr (Infix op e1 e2) =
