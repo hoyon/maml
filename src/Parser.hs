@@ -42,10 +42,18 @@ boolean :: Parser Constant
 boolean = try (reserved "true" >> pure (Bool True))
   <|> try (reserved "false" >> pure (Bool False))
 
+-- | Character which can start an identifier
+idStart :: Parser Char
+idStart = letterChar <|> char '_'
+
+-- | Characters which make up the rest of the identifier
+idRest :: Parser Char
+idRest = alphaNumChar <|> char '_'
+
 identifier :: Parser Text
 identifier = (lexeme . try) $ toS <$> (p >>= check)
   where
-    p = (:) <$> letterChar <*> many alphaNumChar
+    p = (:) <$> idStart <*> many idRest
     check :: String -> Parser Text
     check x =
       if toS x `elem` reservedWords

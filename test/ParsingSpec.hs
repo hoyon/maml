@@ -51,6 +51,21 @@ spec = do
   it "Use reserved word in expression" $
     parseRefute "fun f x = if + x;"
 
+  it "Variable name starting with reserved word" $
+    parseAssert "val if1 = 3;"
+
+  it "Function name starting with reserved word" $
+    parseAssert "fun if1 n = n + 1"
+
+  it "Underscore in variable name" $
+    parseAssert "val a_a = 4;"
+
+  it "Underscore variable name" $
+    parseAssert "val _ = 2;"
+
+  it "Bad variable name" $
+    parseRefute "val $ = 5;"
+
   where
     parseAssert = shouldSucceedOn $ parse lang ""
     parseRefute = shouldFailOn $ parse lang ""
