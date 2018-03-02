@@ -1,11 +1,4 @@
-module CodeGen.Instruction ( i32Const
-                           , i32Add
-                           , i32Sub
-                           , i32Mul
-                           , i32DivU
-                           , i32Load
-                           , i32Store
-                           )where
+module CodeGen.Instruction where
 
 import           CodeGen.Util
 import           Data.Binary.Put
@@ -24,6 +17,9 @@ i32Literal n
   where
     min32 = fromIntegral (minBound :: Int32)
     max32 = fromIntegral (maxBound :: Int32)
+
+i32 :: Word8
+i32 = 0x7f
 
 -- 32 bit integer arithemetic operations
 i32Add, i32Sub, i32Mul, i32DivU, i32RemS :: Word8
@@ -52,3 +48,6 @@ i32Xor = 0x73
 i32Load, i32Store :: [Word8]
 i32Load = [0x28, 0x02, 0x00]
 i32Store = [0x36, 0x02, 0x00]
+
+i32If :: [Word8]
+i32If = [0x04, i32]

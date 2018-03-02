@@ -60,9 +60,24 @@ compile (CallBuiltin fname) = do
       Just idx -> idx
       Nothing -> panic $ "Could not find built in function " <> fname
 
+compile (If p a b) = do
+  compile p
+  lift $ putWord8 0x04 -- if
+  lift $ putWord8 0x7f -- i32
+  compile a
+  lift $ putWord8 0x05 -- else
+  compile b
+  lift $ putWord8 0x0b -- end
+
 compileOp :: Text -> Word8
 compileOp op
   | op == "+" = i32Add
   | op == "-" = i32Sub
   | op == "*" = i32Mul
   | op == "/" = i32DivU
+  | op == "==" = i32Eq
+  | op == "!-" = i32Ne
+  | op == "<" = i32Lt
+  | op == ">" = i32Gt
+  | op == "<=" = i32Le
+  | op == ">=" = i32Ge
