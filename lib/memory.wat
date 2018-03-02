@@ -116,6 +116,15 @@
         i32.load ;; Get address stored in this entry
         )
 
+  (func $get_global_i32 (export "get_global_i32")
+        (param
+         i32) ;; Index of global
+        (result
+         i32) ;; Value of global
+        (call $get_global (get_local 0))
+        i32.load
+   )
+
   (func (export "main") (result i32)
         call $init
 

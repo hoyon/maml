@@ -1,4 +1,6 @@
-run: memory.wasm
+all: memory.wasm
+
+test: memory.wasm
 	node test.js
 
 memory.wasm: memory.wat

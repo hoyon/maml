@@ -8,12 +8,12 @@ import           Protolude
 import           System.Directory
 import           System.IO.Error
 import           System.Process
-import           System.IO (hGetContents)
+import           System.IO (hClose, hGetContents, openBinaryTempFile)
 import           Test.Hspec
 import           WasmParse
 
 spec :: Spec
-spec = before_ compileWat $
+spec = beforeAll checkWasmBinary $
   describe "Test programs" $ do
     programs <- runIO getPrograms
     mapM_ testCase programs
@@ -22,12 +22,27 @@ testCase :: FilePath -> SpecWith (Arg (IO ()))
 testCase program = it program $ do
   let path = programDir <> program <> "/"
 
+  -- Compile maml
   mamlCode <- readFile (path <> program <> ".maml")
   compiled <- compile mamlCode
 
-  target <- BL.readFile (path <> program <> ".wasm")
+  -- Save compiled wasm to temp file
+  (tmpPath, tmpHandle) <- openBinaryTempFile "/tmp" (program <> ".wasm")
+  BL.hPut tmpHandle compiled
+  hClose tmpHandle
 
-  compiled `shouldBe` target
+  output <- runWasmTest tmpPath (path <> program <> ".wast") path
+  -- No output if tests succeeded
+  output `shouldBe` ""
+
+runWasmTest
+  :: FilePath -- Wasm file
+  -> FilePath -- Wast test file
+  -> FilePath -- Working directory
+  -> IO (Text) -- Pass or fail
+runWasmTest wasm wast dir = do
+  (_, _, Just herr, _) <- createProcess (proc "wasm" [wasm, "-i", wast]) { std_err = CreatePipe }
+  toS <$> hGetContents herr
 
 compile :: Text -> IO LByteString
 compile program = do
@@ -42,17 +57,7 @@ programDir = "test/programs/"
 getPrograms :: IO [FilePath]
 getPrograms = listDirectory programDir
 
-compileWat :: IO ()
-compileWat = do
-  programs <- getPrograms
-  mapM_ runWat2Wasm programs
-
-  where
-    runWat2Wasm program = do
-      let input = program <> ".wat"
-      let output = program <> ".wasm"
-      let dir = programDir <> program
-      (_, _, Just herr, _) <- createProcess (proc "wat2wasm" [input, "-o", output]) { std_err = CreatePipe, cwd = Just dir}
-      err <- hGetContents herr
-      unless (null err) $ putStrLn $ "Error compiling " <> output <> ": \n" <> err
-
+checkWasmBinary :: IO ()
+checkWasmBinary = do
+  wasm <- findExecutable "wasm"
+  wasm `shouldNotBe` Nothing
