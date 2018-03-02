@@ -32,6 +32,10 @@ testCase program = it program $ do
   hClose tmpHandle
 
   output <- runWasmTest tmpPath (path <> program <> ".wast") path
+
+  -- Delete tmp file
+  removeFile tmpPath
+
   -- No output if tests succeeded
   output `shouldBe` ""
 
@@ -41,7 +45,8 @@ runWasmTest
   -> FilePath -- Working directory
   -> IO (Text) -- Pass or fail
 runWasmTest wasm wast dir = do
-  (_, _, Just herr, _) <- createProcess (proc "wasm" [wasm, "-i", wast]) { std_err = CreatePipe }
+  (_, _, Just herr, p) <- createProcess (proc "wasm" [wasm, "-i", wast]) { std_err = CreatePipe }
+  waitForProcess p
   toS <$> hGetContents herr
 
 compile :: Text -> IO LByteString
