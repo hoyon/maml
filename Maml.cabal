@@ -51,6 +51,7 @@ executable Maml-exe
                      , bytestring
                      , protolude >= 0.2
                      , text
+                     , optparse-applicative
   default-language:    Haskell2010
   default-extensions:  OverloadedStrings
                      , NoImplicitPrelude
