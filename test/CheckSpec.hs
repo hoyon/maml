@@ -40,7 +40,7 @@ spec = do
       checkProgram "fun f (a, b, c) = (a + b) * c;"
 
     it "Returning a boolean expression" $
-      checkProgramFail "fun f (a, b) = a == b;"
+      checkProgram "fun f (a, b) = a == b;"
 
     it "Using a declared value in expression" $
       checkProgram "val x = 3; fun f y = x + y;"
@@ -48,14 +48,17 @@ spec = do
     it "Using an undeclared value in expression" $
       checkProgramFail "fun f y = x + y;"
 
-    it "Order doesn't matter" $
-      checkProgram "fun f y = x + y; val x = 3;"
+    it "Order matters" $
+      checkProgramFail "fun f y = x + y; val x = 3;"
 
     it "If statement" $
       checkProgram "fun f (a, b) = if a == b then 1 else 0;"
 
     it "If statement wrong predicate" $
       checkProgramFail "fun f (a, b) = if a + b then 1 else 0;"
+
+    it "If statement different body types" $
+      checkProgramFail "fun f a = if a == a then 1 else a != a;"
 
     it "Complex Predicate" $
       checkProgram "fun f (a, b, c, d) = if ((a == b) || (a == c)) && (c == d) then 1 else 0;"
@@ -66,8 +69,8 @@ spec = do
     it "Nested function calls" $
       checkProgram "fun inc x = x + 1; fun inc2 x = inc (inc x);"
 
-    it "Wrong Arguments" $
-      checkProgramFail "fun f (a, b) = a + b; fun g x = f x;"
+    it "Function currying" $
+      checkProgram "fun f (a, b) = a + b; fun g x = f x; fun h y = g y;"
 
     it "Factorial function" $
       checkProgram "fun fact n = if n == 1 then 1 else n * fact (n - 1);"

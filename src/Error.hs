@@ -3,7 +3,6 @@
 module Error where
 
 import Protolude hiding (Type)
-import Type
 import Control.Monad.Writer
 import Control.Monad.Reader
 import WasmParse
@@ -28,7 +27,7 @@ data Warning
   deriving Show
 
 data Error
-  = Mismatch Type Type
+  = Mismatch Text Text
   | MultipleDefinition Text Int
   | NotDefined Text
   | ParseError Text

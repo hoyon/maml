@@ -46,8 +46,8 @@ getFunctions wasm env = foldl f (builtinTypes, builtinFunctionEntries) (filter i
     isFunction (_, BdFun{}) = True
     isFunction _            = False
 
-    makeTypeEntry (BdFun args _) = TypeEntry (map (const I32) args) (Just I32)
-    makeFuncEntry name (BdFun args expr) idx typeIdx = FunctionEntry idx name args expr typeIdx
+    makeTypeEntry (BdFun _ args _) = TypeEntry (map (const I32) args) (Just I32)
+    makeFuncEntry name (BdFun _ args expr) idx typeIdx = FunctionEntry idx name args expr typeIdx
 
     f :: ([TypeEntry], [FunctionEntry]) -> (Text, Binding) -> ([TypeEntry], [FunctionEntry])
     f (ts, fs) (name, binding) = let te = makeTypeEntry binding

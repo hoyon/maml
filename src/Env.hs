@@ -14,8 +14,9 @@ import           Type
 import           Data.List (elemIndices, lookup)
 
 data Binding
-  = BdVal Expr
-  | BdFun [Text] Expr
+  = BdVal TyExpr Expr
+  | BdLocal TyExpr
+  | BdFun TyExpr [Text] Expr
   deriving Show
 
 type BindingPair = (Text, Binding)
@@ -53,11 +54,11 @@ checkNames ast = case dupes of
 
 -- | Create a list of all bindings
 createEnv :: AST -> ErrWarn Env
-createEnv ast = map makeEnv <$> checkNames ast
+createEnv ast = map makeEnv . zip [0..] <$> checkNames ast
 
-makeEnv :: Dec -> (Text, Binding)
-makeEnv (Val x expr)      = (x, BdVal expr)
-makeEnv (Fun x args expr) = (x, BdFun args expr)
+makeEnv :: (Int, Dec) -> (Text, Binding)
+makeEnv (n, Val x expr)      = (x, BdVal (TVarExpr $ freshTyVar n) expr)
+makeEnv (n, Fun x args expr) = (x, BdFun (TVarExpr $ freshTyVar n) args expr)
 
 -- EnvStack operations
 
@@ -79,7 +80,7 @@ putEnv n binding s@(h:t) = case findEnv n s of
                      else case lookup n env of
                             Just _ -> (True, addToAL env n binding)
                             Nothing -> (False, env)
-putEnv _ _ _ = panic "putEnv: Empty env"
+putEnv n _ _ = panic $ "putEnv: Empty env when putting " <> n
 
 -- Association list funcs from https://github.com/jgoerzen/missingh/blob/master/src/Data/List/Utils.hs
 

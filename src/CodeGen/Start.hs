@@ -47,5 +47,5 @@ getGlobals env = zipWith toGlobal (filter isGlobal env) [0..]
     isGlobal (_, BdFun{}) = False
     isGlobal _            = True
 
-    toGlobal (name, BdVal expr) n = (name, MamlGlobalEntry { mgeIndex = n, mgeExpr = expr})
+    toGlobal (name, BdVal _ expr) n = (name, MamlGlobalEntry { mgeIndex = n, mgeExpr = expr})
     toGlobal _ _ = panic "Global binding must be a value"
