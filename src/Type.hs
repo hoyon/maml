@@ -107,11 +107,11 @@ tySubst theta t@(TVarExpr u) = fromMaybe t (Map.lookup u theta)
 tySubst theta (TApExpr l r) = TApExpr (tySubst theta l) (tySubst theta r)
 tySubst _ t = t
 
-freshPolyTyVar :: Int -> Kind -> TyVar
-freshPolyTyVar n = TyVar ("t" <> show n)
+fresh :: Text -> TyVar
+fresh n = TyVar n Star
 
 freshTyVar :: Int -> TyVar
-freshTyVar n = freshPolyTyVar n Star
+freshTyVar n = TyVar ("t" <> show n) Star
 
 instantiate :: Scheme -> [TyExpr] -> TyExpr
 instantiate (ForAll formals tau) actuals = tySubst (Map.fromList (zip formals actuals)) tau
@@ -191,21 +191,11 @@ solve (Equal tau1 tau2 err) = case (tau1, tau2) of
                                   (TApExpr l r, TApExpr l' r') ->
                                         solve $ (l =~= l') err &&& (r =~=r') err
                                   _ -> Left failMsg
-    where 
-          tvarexpr a tau' = case a |---> tau' of
-                                Just answer -> Right answer
-                                Nothing -> Left failMsg
-          failMsg = Mismatch (tyExprString tau1) (tyExprString tau2)
+  where 
+    tvarexpr a tau' = case a |---> tau' of
+                        Just answer -> Right answer
+                        Nothing -> Left failMsg
+    failMsg = Mismatch (tyExprString tau1) (tyExprString tau2)
 
 makeFunType [t] = t
 makeFunType (t:ts) = tFun t (makeFunType ts)
-
-data Type
-  = TpInt
-  | TpBool
-  | TpFun [Type] Type
-  | TpInfix Type Type Type
-  | TpTuple [Type]
-  | TpUnresolved Text Type
-  | TpUnknown
-  deriving (Show, Eq)

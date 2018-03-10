@@ -13,11 +13,13 @@ import           Type
 import           WasmParse
 import           Prelude (last)
 
-newtype Check a = Check { unCheck :: StateT EnvStack ErrWarn a }
-  deriving (Functor, Applicative, Monad, MonadState EnvStack, MonadWriter [Warning], MonadError Error, MonadReader Wasm)
+data CheckState = CheckState{ csStack :: EnvStack, csCount :: Int }
+
+newtype Check a = Check { unCheck :: StateT CheckState ErrWarn a }
+  deriving (Functor, Applicative, Monad, MonadState CheckState, MonadWriter [Warning], MonadError Error, MonadReader Wasm)
 
 -- | Execute Type Check monad
-execCheck :: Binding -> Text -> EnvStack -> ErrWarn EnvStack
+execCheck :: Binding -> Text -> CheckState -> ErrWarn CheckState
 execCheck b t = execStateT (unCheck (typeDec t b))
 
 -- | Main type checking function
@@ -27,10 +29,16 @@ typeCheck ast = pure ast >>= createEnv >>= deduceTypes
 -- | Take an untyped env and deduce all types
 deduceTypes :: Env -> ErrWarn Env
 deduceTypes env = do
-  res <- foldM (\e (n, b) -> execCheck b n e) [[]] env
-  case head res of
-    Just x  -> return x
+  res <- foldM (\s (n, b) -> execCheck b n s) (CheckState [[]] 0) env
+  case head $ csStack res of
+    Just e  -> return e
     Nothing -> throwError $ OtherError "Failed to type program"
+
+freshVar :: Check TyVar
+freshVar = do
+  cs <- get
+  put cs{csCount = csCount cs + 1}
+  return $ freshTyVar $ csCount cs
 
 -- | Built in infix operators
 builtinInfix :: Map.Map Text TyExpr
@@ -59,36 +67,47 @@ builtinInfix = Map.fromList
 -- | Get the type of a declaration
 typeDec :: Text -> Binding -> Check TyExpr
 typeDec name (BdVal _ expr) = do
-  env <- get
+  cs <- get
   (t, c) <- typeExpr expr
-  put $ putEnv name (BdVal t expr) env
-  return t
 
-typeDec name (BdFun t args expr) = do
-  env <- get
+  subst <- either throwError pure $ solve c
+  
+  let result_t = case t of
+                   TVarExpr v -> fromMaybe t (Map.lookup v subst)
+                   _ -> t
+  unless (result_t == tNumber || result_t == tBool) (throwError $ OtherError "Function not fully applied")
+
+  put cs{csStack = putEnv name (BdVal result_t expr) $ csStack cs}
+  return result_t
+
+typeDec name dec@(BdFun t args expr) = do
+  cs <- get
   -- Create scope with arguments
-  let arg_t = map (\(name, n) -> (name, TVarExpr $ freshTyVar n)) $ zip args [0..]
-  let localEnv = map (\(name, t) -> (name, BdLocal t)) arg_t
+  arg_t <- mapM makeArgs args
+  let localEnv = (name, dec) : map (\(name, t) -> (name, BdLocal t)) arg_t
 
   -- -- Get types with this scope as the environment
-  put (localEnv : env)
+  put cs{csStack = localEnv : csStack cs}
   (e_t, e_c) <- typeExpr expr
 
-  subst <- either throwError (return . Map.toList) $ solve e_c
+  subst <- either throwError pure $ solve e_c
 
   let argTypes = map (matchArg subst) (map snd arg_t)
-  {-let result_t = fromMaybe e_t (lookup e_t subst)-}
   let result_t = case e_t of
-                   TVarExpr v -> fromMaybe e_t (lookup v subst)
+                   TVarExpr v -> fromMaybe e_t (Map.lookup v subst)
                    _ -> e_t
 
   let fun_t = makeFunType (argTypes ++ [result_t])
 
-  put $ putEnv name (BdFun fun_t args expr) env
+  put cs{csStack = putEnv name (BdFun fun_t args expr) $ csStack cs}
 
   return fun_t
   where
-    matchArg l t@(TVarExpr v) = fromMaybe t (lookup v l)
+    makeArgs name = do 
+      tv <- TVarExpr <$> freshVar
+      return (name, tv)
+
+    matchArg l t@(TVarExpr v) = fromMaybe t (Map.lookup v l)
 
 -- | Get the type of an expression
 typeExpr :: Expr -> Check (TyExpr, Constraint)
@@ -115,7 +134,8 @@ typeExpr (Tuple es) = do
   return (tTuple (map fst tc), foldr (&&&) Trivial (map snd tc))
 
 typeExpr (Id iden) = do
-  env <- get
+  cs <- get
+  let env = csStack cs
   case findEnv iden env of
     Just (BdLocal t) -> return (t, Trivial)
     Just (BdVal t _) -> return (t, Trivial)
@@ -133,14 +153,22 @@ typeExpr (Infix op e1 e2) =
   where
     findOperator o = Map.lookup o builtinInfix
 
-typeExpr (Call fname args) = do
-  env <- get
+typeExpr (App a b) = do
+  tyVar <- TVarExpr <$> freshVar
+  (a_t, a_c) <- typeExpr a 
+  (b_t, b_c) <- typeExpr b
+  let fun = tFun b_t tyVar
+  let constraint = (fun =~= a_t) "Application invalid"
+  return (tyVar, constraint &&& a_c &&& b_c)
 
-  case findEnv fname env of
-    Just (BdFun t params _) -> do
-      args_tc <- mapM typeExpr args
-      let tyVar = TVarExpr $ freshTyVar 100
-      let fun = makeFunType $ map fst args_tc ++ [tyVar]
-      let constraint = (fun =~= t) "Function args don't match"
-      return (tyVar, constraint &&& foldr (&&&) Trivial (map snd args_tc))
-    _ -> throwError $ NotDefined fname
+{-typeExpr (Call fname args) = do-}
+{-  env <- get-}
+
+{-  case findEnv fname env of-}
+{-    Just (BdFun t params _) -> do-}
+{-      args_tc <- mapM typeExpr args-}
+{-      let tyVar = TVarExpr $ freshTyVar 100-}
+{-      let fun = makeFunType $ map fst args_tc ++ [tyVar]-}
+{-      let constraint = (fun =~= t) "Function args don't match"-}
+{-      return (tyVar, constraint &&& foldr (&&&) Trivial (map snd args_tc))-}
+{-    _ -> throwError $ NotDefined fname-}

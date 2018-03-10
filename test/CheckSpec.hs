@@ -27,7 +27,7 @@ spec = do
       checkProgram "val x = 1 + 4;"
 
     it "Declaration boolean" $
-      checkProgramFail "val x = 1 == x;"
+      checkProgram "val x = True;"
 
   describe "Function definitions" $ do
     it "Identity function" $
@@ -48,8 +48,10 @@ spec = do
     it "Using an undeclared value in expression" $
       checkProgramFail "fun f y = x + y;"
 
-    it "Order matters" $
+    it "Order matters" $ do
       checkProgramFail "fun f y = x + y; val x = 3;"
+      checkProgramFail "val sum = a + b; val a = 3; val b = 2;"
+      checkProgramFail "val sum = add 3 4; fun add (x, y) = x + y;"
 
     it "If statement" $
       checkProgram "fun f (a, b) = if a == b then 1 else 0;"
@@ -69,14 +71,20 @@ spec = do
     it "Nested function calls" $
       checkProgram "fun inc x = x + 1; fun inc2 x = inc (inc x);"
 
-    it "Function currying" $
-      checkProgram "fun f (a, b) = a + b; fun g x = f x; fun h y = g y;"
-
     it "Factorial function" $
       checkProgram "fun fact n = if n == 1 then 1 else n * fact (n - 1);"
 
     it "Fibonacci function" $
       checkProgram "fun fib n = if n == 0 then 1 else if n == 1 then 1 else (fib (n - 1)) + (fib (n - 2));"
+
+    it "Bad function call" $
+      checkProgramFail "fun add (a, b) = a + b; val n = add 3;"
+
+    it "Good function call" $
+      checkProgram "fun add (a, b) = a + b; val n = add 3 5;"
+
+    it "Polymorphic id function" $
+      checkProgram "fun id x = x; val i = id 1; val b = id True;"
 
   where
     checkProgram str = do

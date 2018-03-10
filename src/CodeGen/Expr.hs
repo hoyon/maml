@@ -20,6 +20,7 @@ compile (Infix op a b) = do
   lift $ putWord8 $ compileOp op
 
 compile (Con (Number n)) = lift $ i32Const n
+compile (Con (Bool b)) = lift $ i32Const $ if b then 1 else 0
 
 compile (Id iden) = do
   cc <- ask
@@ -37,15 +38,23 @@ compile (Id iden) = do
           lift $ putBytes i32Load
         Nothing -> panic $ "Can't find binding for " <> iden
 
-compile (Call fname args) = do
+compile e@(App a b) = do
   cc <- ask
-  case findFunc fname (ccFunctions cc) of
+  let iden = findIden e
+  let args = unfoldArgs e
+  case findFunc iden (ccFunctions cc) of
     Just fe -> do
       mapM_ compile args
       lift $ putWord8 0x10 -- call
       lift $ putUleb128 $ feIndex fe
-    Nothing -> panic $ "Can't find function with name " <> fname
+    Nothing -> panic $ "Can't find function with name " <> iden
   where
+    findIden (App (Id i) b) = i
+    findIden (App a b) = findIden a
+
+    unfoldArgs (App a b) = b : unfoldArgs a
+    unfoldArgs e = []
+
     findFunc key [] = Nothing
     findFunc key (fe@(FunctionEntry _ name _ _ _):fs)
       | key == name = Just fe
@@ -56,9 +65,8 @@ compile (CallBuiltin fname) = do
   lift $ putWord8 0x10 -- call
   lift $ putUleb128 index
   where
-    index = case lookup fname stdLibExported of
-      Just idx -> idx
-      Nothing -> panic $ "Could not find built in function " <> fname
+    index = fromMaybe (panic err) (lookup fname stdLibExported)
+    err = "Couldn't find built in function " <> fname
 
 compile (If p a b) = do
   compile p

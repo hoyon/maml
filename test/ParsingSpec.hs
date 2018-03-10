@@ -15,6 +15,12 @@ spec = do
   it "Negative number" $
     parseAssert "val x = ~1;"
 
+  it "True" $
+    parseAssert "val t = True;"
+
+  it "False" $
+    parseAssert "val f = False;"
+
   it "Double function" $
     parseAssert "fun double x = x * 2;"
 
@@ -25,7 +31,7 @@ spec = do
     parseAssert "fun f x = id x;"
 
   it "Multiple argument function call" $
-    parseAssert "fun f (a, b) = add (a, b);"
+    parseAssert "fun f (a, b) = add a b;"
 
   it "Missing semicolon" $
     parseRefute "val x = 3 val y = 2"

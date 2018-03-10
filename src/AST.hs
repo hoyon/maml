@@ -14,7 +14,7 @@ data Expr
   | Tuple [Expr]
   | Id Text
   | Infix Text Expr Expr
-  | Call Text [Expr]
+  | App Expr Expr
   | CallBuiltin Text -- Assumes arguments are already on stack
   deriving Show
 

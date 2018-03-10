@@ -1,3 +1,5 @@
 val x = 4;
 fun id x = x;
 fun add (x, y) = x + y;
+fun add5 (a, b, c, d, e) = a + b + c + d + e;
+fun quintuple n = add5 n n n n n;

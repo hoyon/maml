@@ -39,8 +39,8 @@ reserved :: Text -> Parser ()
 reserved w = lexeme (string w *> notFollowedBy alphaNumChar)
 
 boolean :: Parser Constant
-boolean = try (reserved "true" >> pure (Bool True))
-  <|> try (reserved "false" >> pure (Bool False))
+boolean = (reserved "True" >> pure (Bool True))
+       <|> (reserved "False" >> pure (Bool False))
 
 -- | Character which can start an identifier
 idStart :: Parser Char
@@ -66,8 +66,6 @@ reservedWords = [ "do"
                 , "if"
                 , "then"
                 , "else"
-                , "true"
-                , "false"
                 ]
 
 reservedSymbols :: [Text]
@@ -81,17 +79,18 @@ term :: Parser Expr
 term = -- try tupleExpr <|>
        -- try unitExpr <|>
        parens expr
+   <|> conExpr
    <|> whileExpr
    <|> ifExpr
-   <|> try conExpr
-   <|> try callExpr
    <|> idExpr
    <?> "term"
 
 -- | Table of expression operations
 ops :: [[Operator Parser Expr]]
 ops = [
-        [ binaryOp "*"
+        [ InfixL (spacef >> pure App) ]
+
+      , [ binaryOp "*"
         , binaryOp "/"
         , binaryOp "%"
         ]
@@ -121,7 +120,7 @@ spacef = sc *> notFollowedBy (choice . map reserved $ reservedSymbols ++ reserve
 
 conExpr :: Parser Expr
 conExpr = Con . Number <$> integer
-  -- <|> Con <$> boolean
+      <|> Con <$> boolean
 
 whileExpr :: Parser Expr
 whileExpr = do
@@ -153,19 +152,6 @@ unitExpr = symbol "()" >> pure (Tuple [])
 
 idExpr :: Parser Expr
 idExpr = Id <$> identifier
-
-callExpr :: Parser Expr
-callExpr = do
-  fname <- identifier
-  args <- try multi <|> single
-  return $ Call fname args
-  where
-    multi = do
-      Tuple args <- tupleExpr
-      return args
-    single = do
-      args <- expr
-      return [args]
 
 dec :: Parser [Dec]
 dec = sepEndBy dec' semi
