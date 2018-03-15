@@ -35,5 +35,10 @@ data Error
   | OtherError Text
   deriving Show
 
+formatError :: Error -> Text
+formatError (ParseError e) = "Parsing error: " <> e
+formatError (OtherError e) = e
+formatError e = show e
+
 warn :: MonadWriter [Warning] m => Warning -> m ()
 warn w = tell [w]
