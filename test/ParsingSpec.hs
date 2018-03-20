@@ -45,7 +45,21 @@ spec = do
   it "Parenthesis in expression" $
     parseAssert "fun f (x, y, z) = (x + y) * z;"
 
-  it "Undefined operand" $
+  it "Operators" $ do
+    parseAssert "fun f (x, y) = x + y;"
+    parseAssert "fun f (x, y) = x - y;"
+    parseAssert "fun f (x, y) = x * y;"
+    parseAssert "fun f (x, y) = x / y;"
+    parseAssert "fun f (x, y) = x % y;"
+
+    parseAssert "fun f (x, y) = x < y;"
+    parseAssert "fun f (x, y) = x > y;"
+    parseAssert "fun f (x, y) = x >= y;"
+    parseAssert "fun f (x, y) = x <= y;"
+    parseAssert "fun f (x, y) = x == y;"
+    parseAssert "fun f (x, y) = x != y;"
+
+  it "Undefined operator" $
     parseRefute "val x = 3 $ 4"
 
   it "Unknown top level binding" $

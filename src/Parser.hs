@@ -101,10 +101,10 @@ ops = [
 
       , [ binaryOp "=="
         , binaryOp "!="
-        , binaryOp "<"
         , binaryOp "<="
-        , binaryOp ">"
+        , binaryOp "<"
         , binaryOp ">="
+        , binaryOp ">"
         , binaryOp "||"
         , binaryOp "&&"
         ]
