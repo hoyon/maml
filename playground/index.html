@@ -18,20 +18,26 @@
             html, body {
                 height: 100%;
             }
+            .columns {
+                height: 80% !important;
+            }
         </style>
     </head>
     <body>
 
     <div class="container h-100">
-        <div class="row">
+        <div class="row" style="padding-bottom: 20px; padding-top: 20px;">
             <button onClick="compileProgram()" type="button" class="btn btn-primary">Compile</button>
         </div>
-        <div class="row h-100">
+        <div class="columns row h-100">
             <div class="col">
                 <div id="editor"></div>
             </div>
             <div class="col">
-                Column 1
+                <div id="output" style="height: 60%; overflow: auto"></div>
+                <div class="cli">
+                    <input id="command" type="text" style="width: 85%" class="form-control" placeholder="Enter command.."></input>
+                </div>
             </div>
         </div>
     </div>
@@ -55,6 +61,8 @@ function base64ToArrayBuffer(base64) {
                 }
         return bytes.buffer;
 }
+var command = document.getElementById("command");
+command.disabled = true;
 
 function compileProgram() {
     var text = editor.getValue();
@@ -75,13 +83,52 @@ function compileProgram() {
         return WebAssembly.instantiate(wasm);
     }).then(function(module) {
         window.exports = module.instance.exports;
+        addToOutput("Compiled successfully!");
+        command.disabled = false;
     }).catch(function(err) {
         err.json()
             .then(function(msg) {
-                alert(msg.error);
+                addError("Compilation error:<br>" + msg.error + "<br>");
+                command.disabled = true;
             })
     })
 }
+
+function addToOutput(text) {
+    var output = document.getElementById("output");
+    var current = output.innerHTML;
+    output.innerHTML = current + text + "<br>";
+
+    // Scroll to bottom of output
+    output.scrollTop = output.scrollHeight;
+}
+
+function addError(error) {
+    var msg = "<font color=\"red\">" + error + "</font>"
+    addToOutput(msg);
+}
+
+command.addEventListener("keyup", function(event) {
+    if (event.key === "Enter") {
+        var words = command.value.split(/\s+/);
+        if (words.length < 1) { return; }
+        var f = words[0];
+        words.shift();
+        var args = words.map(function(i){return parseInt(i, 10)})
+
+        if (f in exports) {
+            var func = exports[f];
+            if (func.length === args.length) {
+                var res = func.apply(null, args);
+                addToOutput(res);
+            } else {
+                addError("Error:<br>Function '" + f + "' takes " + func.length + " arguments");
+            }
+        } else {
+            addError("Error:<br>Function '" + f + "' not defined<br>");
+        }
+    }
+})
         </script>
     </body>
 </html>
