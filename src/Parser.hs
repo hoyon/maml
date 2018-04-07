@@ -2,7 +2,7 @@ module Parser (parseString, lang) where
 
 import           AST
 import           Error
-import           Protolude hiding (try, Infix)
+import           Protolude hiding (try, Infix, many)
 import           Text.Megaparsec
 import           Text.Megaparsec.Char
 import qualified Text.Megaparsec.Char.Lexer as L
