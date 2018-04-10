@@ -71,7 +71,7 @@ typeDec name (BdVal _ expr) = do
   (t, c) <- typeExpr expr
 
   subst <- either throwError pure $ solve c
-  
+
   let result_t = case t of
                    TVarExpr v -> fromMaybe t (Map.lookup v subst)
                    _ -> t
@@ -103,7 +103,7 @@ typeDec name dec@(BdFun t args expr) = do
 
   return fun_t
   where
-    makeArgs name = do 
+    makeArgs name = do
       tv <- TVarExpr <$> freshVar
       return (name, tv)
 
@@ -122,16 +122,6 @@ typeExpr (If p e1 e2) = do
 
   let constraints = (p_t =~= tBool) "Predicate must be boolean" &&& (e1_t =~= e2_t) "Clauses must be same type"
   return (e1_t, constraints &&& p_c &&& e1_c &&& e2_c)
-
-typeExpr (While p e) = do
-  (p_t, p_c) <- typeExpr p
-  (e_t, e_c) <- typeExpr e
-  let constraint = (p_t =~= tBool) "Predicate must be boolean"
-  return (e_t, constraint &&& e_c &&& p_c)
-
-typeExpr (Tuple es) = do
-  tc <- mapM typeExpr es
-  return (tTuple (map fst tc), foldr (&&&) Trivial (map snd tc))
 
 typeExpr (Id iden) = do
   cs <- get
@@ -155,7 +145,7 @@ typeExpr (Infix op e1 e2) =
 
 typeExpr (App a b) = do
   tyVar <- TVarExpr <$> freshVar
-  (a_t, a_c) <- typeExpr a 
+  (a_t, a_c) <- typeExpr a
   (b_t, b_c) <- typeExpr b
   let fun = tFun b_t tyVar
   let constraint = (fun =~= a_t) "Application invalid"

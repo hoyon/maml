@@ -9,9 +9,7 @@ data Constant
 
 data Expr
   = Con Constant
-  | While Expr Expr
   | If Expr Expr Expr
-  | Tuple [Expr]
   | Id Text
   | Infix Text Expr Expr
   | App Expr Expr

@@ -62,7 +62,6 @@ identifier = (lexeme . try) $ toS <$> (p >>= check)
 
 reservedWords :: [Text]
 reservedWords = [ "do"
-                , "while"
                 , "if"
                 , "then"
                 , "else"
@@ -76,11 +75,8 @@ expr :: Parser Expr
 expr = makeExprParser term ops <?> "expression"
 
 term :: Parser Expr
-term = -- try tupleExpr <|>
-       -- try unitExpr <|>
-       parens expr
+term = parens expr
    <|> conExpr
-   <|> whileExpr
    <|> ifExpr
    <|> idExpr
    <?> "term"
@@ -122,14 +118,6 @@ conExpr :: Parser Expr
 conExpr = Con . Number <$> integer
       <|> Con <$> boolean
 
-whileExpr :: Parser Expr
-whileExpr = do
-  reserved "while"
-  exp1 <- expr
-  reserved "do"
-  exp2 <- expr
-  return $ While exp1 exp2
-
 ifExpr :: Parser Expr
 ifExpr = do
   reserved "if"
@@ -139,16 +127,6 @@ ifExpr = do
   reserved "else"
   exp2 <- expr
   return $ If p exp1 exp2
-
-tupleExpr :: Parser Expr
-tupleExpr = parens $ do
-  exp1 <- expr
-  _ <- symbol ","
-  rest <- sepBy1 expr (symbol ",")
-  return $ Tuple (exp1 : rest)
-
-unitExpr :: Parser Expr
-unitExpr = symbol "()" >> pure (Tuple [])
 
 idExpr :: Parser Expr
 idExpr = Id <$> identifier
