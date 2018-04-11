@@ -150,15 +150,3 @@ typeExpr (App a b) = do
   let fun = tFun b_t tyVar
   let constraint = (fun =~= a_t) "Application invalid"
   return (tyVar, constraint &&& a_c &&& b_c)
-
-{-typeExpr (Call fname args) = do-}
-{-  env <- get-}
-
-{-  case findEnv fname env of-}
-{-    Just (BdFun t params _) -> do-}
-{-      args_tc <- mapM typeExpr args-}
-{-      let tyVar = TVarExpr $ freshTyVar 100-}
-{-      let fun = makeFunType $ map fst args_tc ++ [tyVar]-}
-{-      let constraint = (fun =~= t) "Function args don't match"-}
-{-      return (tyVar, constraint &&& foldr (&&&) Trivial (map snd args_tc))-}
-{-    _ -> throwError $ NotDefined fname-}
