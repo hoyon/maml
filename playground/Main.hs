@@ -31,8 +31,7 @@ compileProgram :: ActionM ()
 compileProgram = do
   code <- param "code" `rescue` return
   let ast = parseString $ toS code
-  let wasm = stdLib
-  res <- liftIO $ runErrWarn wasm $ ast >>= typeCheck >>= codegen
+  res <- liftIO $ runErrWarn stdLib $ ast >>= typeCheck >>= codegen
   case res of
     Right bytes -> json $ object ["wasm" .= (toS $ encode bytes :: String)]
     Left err -> do

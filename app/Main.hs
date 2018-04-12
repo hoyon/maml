@@ -41,8 +41,7 @@ run :: Config -> IO ()
 run config = do
   file <- readFile $ input config
   let ast = parseString file
-  let wasm = stdLib
-  result <- runErrWarn wasm $ ast >>= typeCheck >>= codegen
+  result <- runErrWarn stdLib $ ast >>= typeCheck >>= codegen
   case result of
     Right code -> BL.writeFile (output config) code
     Left e     -> putErr "Errors: " >> putErr (show e)
