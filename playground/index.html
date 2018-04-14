@@ -139,9 +139,15 @@
              if (f in exports) {
                  var func = exports[f];
                  if (func.length === args.length) {
-                     var t0 = performance.now();
-                     var res = func.apply(null, args);
-                     var t1 = performance.now();
+                     try {
+                         var t0 = performance.now();
+                         var res = func.apply(null, args);
+                         var t1 = performance.now();
+                     } catch (e) {
+                         addError("Error: " + e);
+                         return;
+                     }
+
                      addToOutput(res + "  <font color=\"grey\">" + (t1 - t0) + "ms</font>");
                  } else {
                      addError("Error:<br>Function '" + f + "' takes " + func.length + " arguments");

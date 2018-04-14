@@ -52,7 +52,7 @@ compile e@(App a b) = do
     findIden (App (Id i) b) = i
     findIden (App a b) = findIden a
 
-    unfoldArgs (App a b) = b : unfoldArgs a
+    unfoldArgs (App a b) = unfoldArgs a ++ [b]
     unfoldArgs e = []
 
     findFunc key [] = Nothing
