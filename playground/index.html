@@ -139,8 +139,10 @@
              if (f in exports) {
                  var func = exports[f];
                  if (func.length === args.length) {
+                     var t0 = performance.now();
                      var res = func.apply(null, args);
-                     addToOutput(res);
+                     var t1 = performance.now();
+                     addToOutput(res + "  <font color=\"grey\">" + (t1 - t0) + "ms</font>");
                  } else {
                      addError("Error:<br>Function '" + f + "' takes " + func.length + " arguments");
                  }
@@ -173,7 +175,7 @@
          }
      }
 
-     // Disable compile bu
+     // Disable compile button when empty
      function disableButton(e) {
          var text = editor.getValue();
          document.getElementById("compile").disabled = text.length === 0;
