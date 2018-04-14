@@ -13,7 +13,7 @@ import           Type
 import           WasmParse
 import           Prelude (last)
 
-data CheckState = CheckState{ csStack :: EnvStack, csCount :: Int }
+data CheckState = CheckState{ csStack :: EnvStack, csCount :: Int, csPrefix :: Text }
 
 newtype Check a = Check { unCheck :: StateT CheckState ErrWarn a }
   deriving (Functor, Applicative, Monad, MonadState CheckState, MonadWriter [Warning], MonadError Error, MonadReader Wasm)
@@ -29,7 +29,7 @@ typeCheck ast = pure ast >>= createEnv >>= deduceTypes
 -- | Take an untyped env and deduce all types
 deduceTypes :: Env -> ErrWarn Env
 deduceTypes env = do
-  res <- foldM (\s (n, b) -> execCheck b n s) (CheckState [[]] 0) env
+  res <- foldM (\s (n, b) -> execCheck b n s) (CheckState [[]] 0 "t") env
   case head $ csStack res of
     Just e  -> return e
     Nothing -> throwError $ OtherError "Failed to type program"
@@ -38,7 +38,7 @@ freshVar :: Check TyVar
 freshVar = do
   cs <- get
   put cs{csCount = csCount cs + 1}
-  return $ freshTyVar $ csCount cs
+  return $ freshTyVar $ csPrefix cs <> show (csCount cs)
 
 -- | Built in infix operators
 builtinInfix :: Map.Map Text TyExpr
@@ -68,6 +68,7 @@ builtinInfix = Map.fromList
 typeDec :: Text -> Binding -> Check TyExpr
 typeDec name (BdVal _ expr) = do
   cs <- get
+  put cs{csPrefix = name}
   (t, c) <- typeExpr expr
 
   subst <- either throwError pure $ solve c
@@ -82,14 +83,18 @@ typeDec name (BdVal _ expr) = do
 
 typeDec name dec@(BdFun t args expr) = do
   cs <- get
+  put cs{csPrefix = name}
   -- Create scope with arguments
   arg_t <- mapM makeArgs args
   let localEnv = (name, dec) : map (\(name, t) -> (name, BdLocal t)) arg_t
 
-  -- -- Get types with this scope as the environment
+  -- Put args into scope
   put cs{csStack = localEnv : csStack cs}
+
+  -- Get type and constraints of function
   (e_t, e_c) <- typeExpr expr
 
+  -- Solve types
   subst <- either throwError pure $ solve e_c
 
   let argTypes = map (matchArg subst) (map snd arg_t)
@@ -120,7 +125,7 @@ typeExpr (If p e1 e2) = do
   (e1_t, e1_c) <- typeExpr e1
   (e2_t, e2_c) <- typeExpr e2
 
-  let constraints = (p_t =~= tBool) "Predicate must be boolean" &&& (e1_t =~= e2_t) "Clauses must be same type"
+  let constraints = (tBool =~= p_t) "Predicate must be boolean" &&& (e1_t =~= e2_t) "Clauses must be same type"
   return (e1_t, constraints &&& p_c &&& e1_c &&& e2_c)
 
 typeExpr (Id iden) = do
@@ -148,5 +153,5 @@ typeExpr (App a b) = do
   (a_t, a_c) <- typeExpr a
   (b_t, b_c) <- typeExpr b
   let fun = tFun b_t tyVar
-  let constraint = (fun =~= a_t) "Application invalid"
+  let constraint = (a_t =~= fun) "Application invalid"
   return (tyVar, constraint &&& a_c &&& b_c)

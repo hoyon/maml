@@ -37,6 +37,7 @@ data Error
 
 formatError :: Error -> Text
 formatError (ParseError e) = "Parsing error: " <> e
+formatError (Mismatch exp act) = "Type mismatch: Expected " <> show exp <> " but got " <> show act
 formatError (OtherError e) = e
 formatError e = show e
 

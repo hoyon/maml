@@ -35,7 +35,6 @@ data TyExpr = TVarExpr TyVar
 
 data Scheme = ForAll [TyVar] TyExpr
 
--- | Create a kind with n type parameters
 kindStack :: Int -> Kind
 kindStack 0 = Star
 kindStack n = KFun Star (kindStack (n - 1))
@@ -110,8 +109,8 @@ tySubst _ t = t
 fresh :: Text -> TyVar
 fresh n = TyVar n Star
 
-freshTyVar :: Int -> TyVar
-freshTyVar n = TyVar ("t" <> show n) Star
+freshTyVar :: Text -> TyVar
+freshTyVar t = TyVar t Star
 
 instantiate :: Scheme -> [TyExpr] -> TyExpr
 instantiate (ForAll formals tau) actuals = tySubst (Map.fromList (zip formals actuals)) tau
@@ -172,11 +171,12 @@ a |---> tau@(TVarExpr b) = if a == b
                                         in if kindA == kindB
                                                then Just (Map.singleton a tau)
                                                else Nothing
+
 a |---> tau = if Set.member a (freevars tau)
                   then Nothing
                   else Just (Map.singleton a tau)
 
-solve :: Constraint -> Either Error Subst 
+solve :: Constraint -> Either Error Subst
 solve Trivial = Right idSubst
 solve (And l r) = do
         theta1 <- solve l
@@ -191,7 +191,7 @@ solve (Equal tau1 tau2 err) = case (tau1, tau2) of
                                   (TApExpr l r, TApExpr l' r') ->
                                         solve $ (l =~= l') err &&& (r =~=r') err
                                   _ -> Left failMsg
-  where 
+  where
     tvarexpr a tau' = case a |---> tau' of
                         Just answer -> Right answer
                         Nothing -> Left failMsg

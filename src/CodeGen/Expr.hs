@@ -83,6 +83,7 @@ compileOp op
   | op == "-" = i32Sub
   | op == "*" = i32Mul
   | op == "/" = i32DivU
+  | op == "%" = i32RemS
   | op == "==" = i32Eq
   | op == "!-" = i32Ne
   | op == "<" = i32Lt

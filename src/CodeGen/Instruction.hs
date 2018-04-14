@@ -27,7 +27,7 @@ i32Add  = 0x6A
 i32Sub  = 0x6B
 i32Mul  = 0x6C
 i32DivU = 0x6E
-i32RemS = 0xdF
+i32RemS = 0x6F
 
 -- 32 bit integer comparison operators
 i32Eq, i32Ne, i32Lt, i32Gt, i32Le, i32Ge :: Word8
