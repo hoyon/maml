@@ -1,0 +1,6 @@
+fun even n = (n % 2) == 0;
+fun odd n = (n % 2) == 1;
+
+fun f (a, b) = if even a
+               then a
+               else b;

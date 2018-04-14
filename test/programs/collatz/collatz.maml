@@ -1,0 +1,10 @@
+fun collatz n = if (n % 2) == 0
+                then n / 2
+                else (3 * n) + 1;
+                
+fun collatz_length_helper (n, count) =
+    if (collatz n) == 1
+    then count
+    else collatz_length_helper (collatz n) (count + 1);
+    
+fun collatz_length n = collatz_length_helper n 1;
