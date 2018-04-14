@@ -24,8 +24,8 @@ main = scotty 3000 $ do
 showIndex :: ActionM ()
 showIndex = do
   setHeader "Content-Type" "text/html"
-  file "playground/index.html"
-{-showIndex = text indexFile-}
+  -- file "playground/index.html"
+  text indexFile
 
 compileProgram :: ActionM ()
 compileProgram = do

@@ -1,134 +1,185 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width" />
-        <title>MaML Playground</title>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css">
-        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>MaML Playground</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.0/normalize.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
 
-        <style>
-            #editor {
-                position: absolute;
-                top: 0;
-                right: 0;
-                bottom: 0;
-                left: 0;
-            }
-            html, body {
-                height: 100%;
-            }
-            .columns {
-                height: 80% !important;
-            }
-        </style>
-    </head>
-    <body>
+    <style>
+     #editor {
+         position: absolute;
+         top: 0;
+         right: 0;
+         bottom: 0;
+         left: 0;
+         height: 600px;
+         border: 1px solid grey;
+     }
+     html, body {
+         height: 100%;
+         background-color: #fefefa;
+     }
+     .columns {
+         height: 80% !important;
+     }
+     #output {
+         height: 600px;
+         overflow: auto;
+         border: 1px solid grey;
+     }
+     h1 {
+         padding-top: 15px;
+     }
+    </style>
+  </head>
+  <body>
 
     <div class="container h-100">
-        <div class="row" style="padding-bottom: 20px; padding-top: 20px;">
-            <button onClick="compileProgram()" type="button" class="btn btn-primary">Compile</button>
+      <h1>MaML Web Playground</h1>
+      <div class="btn-group" style="padding-bottom: 20px; padding-top: 20px;">
+        <button id="compile" onClick="compileProgram()" type="button" class="btn btn-primary">Compile</button>
+        <button id="upload" class="btn btn-outline-primary">Upload file</button>
+        <input id="file" type="file" hidden />
+      </div>
+      <div class="columns row h-100">
+        <div class="col">
+          <div id="editor"></div>
         </div>
-        <div class="columns row h-100">
-            <div class="col">
-                <div id="editor"></div>
-            </div>
-            <div class="col">
-                <div id="output" style="height: 60%; overflow: auto"></div>
-                <div class="cli">
-                    <input id="command" type="text" style="width: 85%" class="form-control" placeholder="Enter command.."></input>
-                </div>
-            </div>
+        <div class="col">
+          <div id="output"></div>
+          <div class="cli">
+            <input id="command" type="text" style="width: 100%" class="form-control" placeholder="Enter command.."></input>
+            <button class="btn" onClick="clearOutput()">Clear output</button>
+          </div>
         </div>
+      </div>
     </div>
 
 
-        <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
 
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.3.1/ace.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.3.1/ace.js"></script>
 
-        <script>
-            var editor = ace.edit("editor");
+    <script>
+     var editor = ace.edit("editor");
 
-function base64ToArrayBuffer(base64) {
-        var binary_string =  window.atob(base64);
-        var len = binary_string.length;
-        var bytes = new Uint8Array( len );
-        for (var i = 0; i < len; i++)        {
-                    bytes[i] = binary_string.charCodeAt(i);
-                }
-        return bytes.buffer;
-}
-var command = document.getElementById("command");
-command.disabled = true;
+     function base64ToArrayBuffer(base64) {
+         var binary_string =  window.atob(base64);
+         var len = binary_string.length;
+         var bytes = new Uint8Array( len );
+         for (var i = 0; i < len; i++)        {
+             bytes[i] = binary_string.charCodeAt(i);
+         }
+         return bytes.buffer;
+     }
+     var command = document.getElementById("command");
+     command.disabled = true;
 
-function compileProgram() {
-    var text = editor.getValue();
-    fetch("/compile", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded"
-        },
-        body: "code=" + encodeURIComponent(text)
-    }).then(function(res) {
-        if (res.ok) {
-            return res.json();
-        } else {
-            return Promise.reject(res)
-        }
-    }).then(function(json) {
-        var wasm = base64ToArrayBuffer(json.wasm)
-        return WebAssembly.instantiate(wasm);
-    }).then(function(module) {
-        window.exports = module.instance.exports;
-        addToOutput("Compiled successfully!");
-        command.disabled = false;
-    }).catch(function(err) {
-        err.json()
-            .then(function(msg) {
-                addError("Compilation error:<br>" + msg.error + "<br>");
-                command.disabled = true;
-            })
-    })
-}
+     function compileProgram() {
+         var text = editor.getValue();
+         fetch("/compile", {
+             method: "POST",
+             headers: {
+                 "Content-Type": "application/x-www-form-urlencoded"
+             },
+             body: "code=" + encodeURIComponent(text)
+         }).then(function(res) {
+             if (res.ok) {
+                 return res.json();
+             } else {
+                 return Promise.reject(res)
+             }
+         }).then(function(json) {
+             var wasm = base64ToArrayBuffer(json.wasm)
+             return WebAssembly.instantiate(wasm);
+         }).then(function(module) {
+             window.exports = module.instance.exports;
+             addToOutput("Compiled successfully!");
+             command.disabled = false;
+         }).catch(function(err) {
+             err.json()
+                .then(function(msg) {
+                    addError("Compilation error:<br>" + msg.error + "<br>");
+                    command.disabled = true;
+                })
+         })
+     }
 
-function addToOutput(text) {
-    var output = document.getElementById("output");
-    var current = output.innerHTML;
-    output.innerHTML = current + text + "<br>";
+     function addToOutput(text) {
+         var output = document.getElementById("output");
+         var current = output.innerHTML;
+         output.innerHTML = current + text + "<br>";
 
-    // Scroll to bottom of output
-    output.scrollTop = output.scrollHeight;
-}
+         // Scroll to bottom of output
+         output.scrollTop = output.scrollHeight;
+     }
 
-function addError(error) {
-    var msg = "<font color=\"red\">" + error + "</font>"
-    addToOutput(msg);
-}
+     function addError(error) {
+         var msg = "<font color=\"red\">" + error + "</font>"
+         addToOutput(msg);
+     }
 
-command.addEventListener("keyup", function(event) {
-    if (event.key === "Enter") {
-        var words = command.value.split(/\s+/);
-        if (words.length < 1) { return; }
-        var f = words[0];
-        words.shift();
-        var args = words.map(function(i){return parseInt(i, 10)})
+     function clearOutput() {
+         document.getElementById("output").innerHTML = "";
+     }
 
-        if (f in exports) {
-            var func = exports[f];
-            if (func.length === args.length) {
-                var res = func.apply(null, args);
-                addToOutput(res);
-            } else {
-                addError("Error:<br>Function '" + f + "' takes " + func.length + " arguments");
-            }
-        } else {
-            addError("Error:<br>Function '" + f + "' not defined<br>");
-        }
-    }
-})
-        </script>
-    </body>
+     // Run command on enter
+     command.addEventListener("keyup", function(event) {
+         if (event.key === "Enter") {
+             var words = command.value.split(/\s+/);
+             if (words.length < 1) { return; }
+             var f = words[0];
+             words.shift();
+             var args = words.map(function(i){return parseInt(i, 10)})
+
+             if (f in exports) {
+                 var func = exports[f];
+                 if (func.length === args.length) {
+                     var res = func.apply(null, args);
+                     addToOutput(res);
+                 } else {
+                     addError("Error:<br>Function '" + f + "' takes " + func.length + " arguments");
+                 }
+             } else {
+                 addError("Error:<br>Function '" + f + "' not defined<br>");
+             }
+         }
+     })
+
+     // Upload button
+     document.getElementById("upload").addEventListener("click", openDialog);
+
+     function openDialog() {
+         document.getElementById("file").click();
+     }
+
+     document.getElementById("file").addEventListener("change", insertFile);
+
+     function insertFile() {
+         var file = document.getElementById("file").files[0];
+         if (file) {
+             var reader = new FileReader();
+             reader.readAsText(file, "UTF-8");
+             reader.onload = function (event) {
+                 editor.setValue(event.target.result);
+             }
+             reader.onerror = function (event) {
+                 addError("Error:<br>Failed to load file");
+             }
+         }
+     }
+
+     // Disable compile bu
+     function disableButton(e) {
+         var text = editor.getValue();
+         document.getElementById("compile").disabled = text.length === 0;
+     }
+     disableButton();
+     editor.on("change", disableButton);
+    </script>
+  </body>
 </html>
