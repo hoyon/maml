@@ -1,8 +1,8 @@
-name:                Maml
-version:             0.1.0.0
+name:                maml
+version:             1.0
 author:              Ho-Yon Mak
 maintainer:          hoyon.mak@gmail.com
-copyright:           2017 Ho-Yon Mak
+copyright:           2018 Ho-Yon Mak
 build-type:          Simple
 cabal-version:       >=1.10
 
@@ -42,11 +42,11 @@ library
   default-extensions:  OverloadedStrings
                      , NoImplicitPrelude
 
-executable Maml-exe
+executable mamlc
   hs-source-dirs:      app
   main-is:             Main.hs
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       Maml
+  build-depends:       maml
                      , base
                      , bytestring
                      , protolude >= 0.2
@@ -56,11 +56,11 @@ executable Maml-exe
   default-extensions:  OverloadedStrings
                      , NoImplicitPrelude
 
-executable Maml-playground
+executable maml-playground
   hs-source-dirs:      playground
   main-is:             Main.hs
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
-  build-depends:       Maml
+  build-depends:       maml
                      , base
                      , scotty
                      , protolude
@@ -73,7 +73,7 @@ executable Maml-playground
   default-extensions:  OverloadedStrings
                      , NoImplicitPrelude
 
-test-suite Maml-test
+test-suite maml-test
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   main-is:             Spec.hs
@@ -90,7 +90,7 @@ test-suite Maml-test
                      , directory
                      , bytestring
                      , process
-                     , Maml
+                     , maml
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   default-language:    Haskell2010
   default-extensions:  OverloadedStrings
