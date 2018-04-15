@@ -90,3 +90,5 @@ compileOp op
   | op == ">" = i32Gt
   | op == "<=" = i32Le
   | op == ">=" = i32Ge
+  | op == "||" = i32Or
+  | op == "&&" = i32And
